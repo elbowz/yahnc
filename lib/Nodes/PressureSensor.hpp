@@ -16,7 +16,7 @@ private:
 protected:
     float readMeasurement() override;
 
-    void sendMeasurement(float value, ChangeValueReason reason) const override;
+    void sendMeasurement(float value) const override;
 
 public:
     explicit PressureSensor(BME280Node &node, const char *name = cPressureTopic, uint32_t readInterval = 60 * 1000UL, uint8_t sendOnChangeRate = 0, float sendOnChangeAbs = 10);

@@ -11,7 +11,9 @@ class PressureSensor;
 
 /**
  * TODO:
- * Create a MultiSensorNode that aggregate SensorBase through a std::vector<SensorBase*> sensors.
+ * * Create a MultiSensorNode that aggregate SensorBase through a std::vector<SensorBase*> sensors.
+ * * Add destructor (eg. delete pointers) or use std::unique_ptr<>/std::shared_ptr<Base>
+ * * move all advertise in setup()?
  */
 
 class BME280Node : public BaseNode {
@@ -37,19 +39,19 @@ private:
     protected:
         float readMeasurement() override;
 
-        void sendMeasurement(float value, ChangeValueReason reason) const override;
+        void sendMeasurement(float value) const override;
 
     public:
         explicit Temperature(BME280Node &node, const char *name = cTemperatureTopic, uint32_t readInterval = 4 * 1000UL, uint8_t sendOnChangeRate = 0, float sendOnChangeAbs = 0.1);
 
         void setup();
     };
-
+public:
     Temperature mTempSensor;
     PressureSensor *mPressureSensor;
     SensorBase<float> mHumiditySensor;
 
-    void sendHumidity(float value, ChangeValueReason reason) const;
+    void sendHumidity(float value) const;
 
     float readHumidity();
 

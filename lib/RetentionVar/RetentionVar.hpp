@@ -5,6 +5,7 @@
 
 /*
 // TODO
+// * add OnChange to RetentionVar class...and rename OnUpdate => updateCondition/Guard
 // * not declared inside RetentionVar to avoid use with template parameter (ie. RetentionVar<int>::ChangeValueReason::NO_CHANGE)
 // * not used the scoped "enum class" to allow implicit casting
 namespace ChangeValue {
@@ -89,6 +90,10 @@ public:
     uint8_t getGapRate() const { return mGapRate; }
 
     T getGapAbs() const { return mGapAbs; }
+
+    ChangeValueReason getUpdateReason() const { return mUpdateReason; }
+
+    uint8_t getIntUpdateReason() const { return static_cast<uint8_t>(mUpdateReason); }
 
     void setOnUpdateFunc(const OnUpdateFunc &onUpdateFunc) { mOnUpdateFunc = onUpdateFunc; }
 };

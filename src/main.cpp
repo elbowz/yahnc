@@ -8,16 +8,42 @@
 #include <Homie.h>
 
 #include <BME280Node.hpp>
+#include <SwitchNode.hpp>
+#include <BinarySensorNode.hpp>
 
 const int BME280_I2C_ADDRESS = 0x76; // Default I2C address for BME280. can be changed to 0x76 by changing a solder bridge
 
 // Create one node of each kind
 BME280Node bme280Node("bme280", "Outdoor", BME280_I2C_ADDRESS);
+SwitchNode led("light", "Led light", 14);
+BinarySensorNode pir("motion", "Motion detector", 12, INPUT, 5, HIGH);
+
+bool globalInputHandler(const HomieNode& node, const HomieRange& range, const String& property, const String& value) {
+    Homie.getLogger() << "Received on node " << node.getId() << ": " << property << " = " << value << endl;
+    return false;
+}
+
+bool onChangeFunc(bool value) {
+    Homie.getLogger() << "onChangeFunc " << value << endl;
+
+    return false;
+}
+
+bool lightOnHandler(const HomieRange& range, const String& value) {
+    Homie.getLogger() << "lightOnHandler " << value << endl;
+
+    return true;
+}
+
+bool motionHandler(bool state) {
+    Homie.getLogger() << "motion: " << state << endl;
+    return true;
+}
 
 void setup()
 {
   Homie_setFirmware(FW_NAME, FW_VERSION);
-
+  Homie.setGlobalInputHandler(globalInputHandler);
   Serial.begin(SERIAL_SPEED);
   Serial << endl
          << endl;
@@ -32,6 +58,11 @@ void setup()
   // Initializes I2C for BME280 sensor and display
   Homie.getLogger() << "• Wire begin SDA=" << PIN_SDA << " SCL=" << PIN_SCL << endl;
   Wire.begin(PIN_SDA, PIN_SCL);
+
+  led.setOnChangeFunc(onChangeFunc);
+  led.getProperty("on")->settable(lightOnHandler);
+
+  pir.setOnChangeFunc(motionHandler);
 
   //Homie.disableLedFeedback();
   //Homie.disableResetTrigger();

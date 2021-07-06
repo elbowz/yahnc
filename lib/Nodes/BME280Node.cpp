@@ -18,15 +18,16 @@ BME280Node::BME280Node(const char *id,
 
     mHumiditySensor
             .setReadMeasurementFunc(std::bind(&BME280Node::readHumidity, this))
-            // pre C++ 11 way
-            //.setSendMeasurementFunc(std::bind(&BME280Node::sendHumidity, this, std::placeholders::_1, std::placeholders::_2));
-            // post C++ 11, lambda function way
-            .setSendMeasurementFunc([=](float value, ChangeValueReason reason) { this->sendHumidity(value, reason); });
+                    // pre C++ 11 way
+                    //.setSendMeasurementFunc(std::bind(&BME280Node::sendHumidity, this, std::placeholders::_1));
+                    // post C++ 11, lambda function way
+            .setSendMeasurementFunc([=](float value) { this->sendHumidity(value); });
 
     mPressureSensor = new PressureSensor(*this);
 
     auto tempOffsetName = String(id) + ".temperatureOffset";
-    mTempOffsetSetting = new HomieSetting<double>(tempOffsetName.c_str(), "The temperature offset in degrees [-10.0, 10.0] Default = 0");
+    mTempOffsetSetting = new HomieSetting<double>(tempOffsetName.c_str(),
+                                                  "The temperature offset in degrees [-10.0, 10.0] Default = 0");
 
     mTempOffsetSetting
             ->setDefaultValue(0.0f)
@@ -66,17 +67,17 @@ void BME280Node::setup() {
 
         bme280.setSampling(Adafruit_BME280::MODE_FORCED, mTempSampling, mPressSampling, mHumSampling, mFilter);
         bme280.setTemperatureCompensation(static_cast<float>(mTempOffsetSetting->get()));
+
+        auto mAdafruitSensor = bme280.getHumiditySensor();
+        mAdafruitSensor->printSensorDetails();
+
+        mTempSensor.setup();
+        mPressureSensor->setup();
     } else {
 
         mSensorFound = false;
         Homie.getLogger() << cIndent << F("not found. Check wiring!") << endl;
     }
-
-    auto mAdafruitSensor = bme280.getHumiditySensor();
-    mAdafruitSensor->printSensorDetails();
-
-    mTempSensor.setup();
-    mPressureSensor->setup();
 }
 
 /*
@@ -97,16 +98,16 @@ void BME280Node::loop() {
     // To figure out when isConnected is init and loop is called, see:
     // * https://github.com/homieiot/homie-esp8266/blob/9cd83972f27b394eab8a5e3e2baef20eea1b5408/src/SendingPromise.cpp#L43
     // * https://github.com/homieiot/homie-esp8266/blob/9cd83972f27b394eab8a5e3e2baef20eea1b5408/src/Homie/Boot/BootNormal.cpp#L125-L146
-    if (Homie.isConnected()) {
+    if (Homie.isConnected() && mSensorFound) {
         mTempSensor.loop();
         mHumiditySensor.loop();
         mPressureSensor->loop();
     }
 }
 
-void BME280Node::sendHumidity(float value, ChangeValueReason reason) const {
+void BME280Node::sendHumidity(float value) const {
 
-    Homie.getLogger() << cIndent << mHumiditySensor.getName() << F(":  ") << value << " " << cUnitPercent << " due reason: " << (int)reason << endl;
+    Homie.getLogger() << cIndent << mHumiditySensor.getName() << F(":  ") << value << " " << cUnitPercent << " due reason: " << this->mHumiditySensor.getIntUpdateReason() << endl;
     float absHumidity = EnvironmentCalculations::AbsoluteHumidity(mTempSensor, value, EnvironmentCalculations::TempUnit_Celsius);
 
     setProperty(cHumidityTopic).send(String(value));
@@ -128,7 +129,7 @@ BME280Node::Temperature::Temperature(BME280Node &node, const char *name, uint32_
     mAdafruitSensor->getSensor(&sensor);
 
     static char format[15];
-    snprintf ( format, 15, "%2.2f:%2.2f", sensor.min_value, sensor.max_value);
+    snprintf(format, 15, "%2.2f:%2.2f", sensor.min_value, sensor.max_value);
 
     mNode.advertise(getName())
             .setDatatype("float")
@@ -153,9 +154,9 @@ float BME280Node::Temperature::readMeasurement() {
     return mNode.bme280.readTemperature();
 }
 
-void BME280Node::Temperature::sendMeasurement(float value, ChangeValueReason reason) const {
+void BME280Node::Temperature::sendMeasurement(float value) const {
 
-    Homie.getLogger() << mNode.cIndent << getName() << F(": ") << value << " " << cUnitDegrees << " due reason: " << (int)reason << endl;
+    Homie.getLogger() << mNode.cIndent << getName() << F(": ") << value << " " << cUnitDegrees << " due reason: " << (int) mUpdateReason << endl;
     float heatIndex = EnvironmentCalculations::HeatIndex(value, mNode.mHumiditySensor, EnvironmentCalculations::TempUnit_Celsius);
 
     mNode.setProperty(cTemperatureTopic).send(String(value));
