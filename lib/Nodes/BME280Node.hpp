@@ -46,14 +46,6 @@ private:
 
         void setup();
     };
-public:
-    Temperature mTempSensor;
-    PressureSensor *mPressureSensor;
-    SensorBase<float> mHumiditySensor;
-
-    void sendHumidity(float value) const;
-
-    float readHumidity();
 
 protected:
     void setup() override;
@@ -62,7 +54,15 @@ protected:
 
     void loop() override;
 
+    void sendHumidity(float value) const;
+
+    float readHumidity();
+
 public:
+    Temperature mTempSensor;
+    PressureSensor *mPressureSensor;
+    SensorBase<float> mHumiditySensor;
+
     explicit BME280Node(const char *id,
                         const char *name,
                         uint8_t i2cAddress = 0x76,

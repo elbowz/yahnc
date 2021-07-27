@@ -128,7 +128,7 @@ ChangeValueReason RetentionVar<T>::updateWithReason(T value) {
         return setValue(value, ChangeValueReason::INIT);
     }
 
-    T diff = (mGapRate || mGapAbs ? absDiff(mValue, value) : 0);
+    T diff = (mGapRate || mGapAbs) ? absDiff(mValue, value) : 0;
 
     if (diff) {
 

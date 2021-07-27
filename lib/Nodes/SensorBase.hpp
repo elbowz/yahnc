@@ -5,6 +5,9 @@
 
 #include <RetentionVar.hpp>
 
+
+//TODO: nullptr also for default value of onChangeFunc ?
+
 template<class T>
 class SensorInterface {
 public:
@@ -115,7 +118,8 @@ protected:
     RetentionVar<T> mReadMeasurement;
 
 public:
-    explicit SensorBase(const char *name, uint32_t readInterval = 300 * 1000UL,
+    explicit SensorBase(const char *name,
+                        uint32_t readInterval = 300 * 1000UL,
                         uint8_t sendOnChangeRate = 2,
                         T sendOnChangeAbs = 0,
                         const typename SensorInterface<T>::ReadMeasurementFunc &readMeasurementFunc = nullptr,
@@ -137,7 +141,7 @@ SensorBase<T>::SensorBase(const char *name,
                           const typename SensorInterface<T>::ReadMeasurementFunc &readMeasurementFunc,
                           const typename SensorInterface<T>::SendMeasurementFunc &sendMeasurementFunc,
                           const typename SensorInterface<T>::OnChangeFunc &onChangeFunc)
-        :  SensorInterface<T>(name, readMeasurementFunc, sendMeasurementFunc),
+        :  SensorInterface<T>(name, readMeasurementFunc, sendMeasurementFunc, onChangeFunc),
            RetentionVar<T>(0, sendOnChangeRate, sendOnChangeAbs),
            mReadMeasurement(readInterval) {
 }
@@ -158,6 +162,10 @@ void SensorBase<T>::loop() {
 
         // Why using "this->": https://isocpp.org/wiki/faq/templates#nondependent-name-lookup-members
         ChangeValueReason reason = this->updateWithReason(value);
-        if (static_cast<bool>(reason)) { this->sendMeasurement(value); }
+
+        if (static_cast<bool>(reason)) {
+            // TODO: move on change here
+            this->sendMeasurement(value);
+        }
     }
 }

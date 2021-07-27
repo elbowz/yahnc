@@ -40,7 +40,7 @@ BME280Node::BME280Node(const char *id,
             .setFormat("error, ok");
 
     advertise(cHumidityTopic)
-            .setDatatype("float")
+            .setDatatype("percent")
             .setFormat("0:100")
             .setUnit(cUnitPercent);
 
@@ -90,7 +90,7 @@ void BME280Node::onReadyToOperate() {
 }
 
 /*
- * Called EVERYTIME, when the device is in normal mode and MQTT is connected
+ * Called EVERYTIME, when the device is in normal mode (after configuration si done)
  */
 void BME280Node::loop() {
 
@@ -128,8 +128,9 @@ BME280Node::Temperature::Temperature(BME280Node &node, const char *name, uint32_
     mAdafruitSensor = mNode.bme280.getTemperatureSensor();
     mAdafruitSensor->getSensor(&sensor);
 
-    static char format[15];
-    snprintf(format, 15, "%2.2f:%2.2f", sensor.min_value, sensor.max_value);
+    // TODO: Something better then "static" to preserve variable for async execution of .advertise() ?
+    static char format[20];
+    snprintf(format, sizeof(format), "%2.2f:%2.2f", sensor.min_value, sensor.max_value);
 
     mNode.advertise(getName())
             .setDatatype("float")
