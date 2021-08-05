@@ -120,7 +120,7 @@ template<class T>
 class SensorBase : public SensorInterface<T>, public RetentionVar<T> {
 protected:
     uint32_t mReadInterval;
-    uint32_t mlastReadMeasurement;
+    uint32_t mLastReadMeasurement;
 
 public:
     explicit SensorBase(const char *name,
@@ -153,7 +153,7 @@ SensorBase<T>::SensorBase(const char *name,
         :  SensorInterface<T>(name, readMeasurementFunc, sendMeasurementFunc, onChangeFunc),
            RetentionVar<T>(0, sendOnChangeRate, sendOnChangeAbs),
            mReadInterval(readInterval),
-           mlastReadMeasurement(0) {
+           mLastReadMeasurement(0) {
 }
 
 template<class T>
@@ -161,10 +161,10 @@ void SensorBase<T>::loop() {
 
     uint32_t now = millis();
 
-    if (!mlastReadMeasurement || now - mlastReadMeasurement > mReadInterval) {
+    if (!mLastReadMeasurement || now - mLastReadMeasurement > mReadInterval) {
 
         T value = this->readMeasurement();
-        mlastReadMeasurement = now;
+        mLastReadMeasurement = now;
 
         // Why using "this->": https://isocpp.org/wiki/faq/templates#nondependent-name-lookup-members
         ChangeValueReason reason = this->updateWithReason(value);
