@@ -10,7 +10,6 @@
  * TODO:
  * * nullptr also for default value of onLightChange ?
  * * rename readMeasurement/sendMeasurement to read/send
- * * move readMeasurement/sendMeasurement to public
  * * remove SensorInterface and use a Template Specialization of RetentionVar for bool ?
  * * add topic, dataType, format, unit (used for advertise and setProperty)...maybe extend PropertyInterface ?
  */
@@ -119,8 +118,8 @@ bool SensorInterface<T>::onChange(T value) {
 template<class T>
 class SensorBase : public SensorInterface<T>, public RetentionVar<T> {
 protected:
-    // note: overkilled use of RetentionVar...better HomieInternals::Timer, Ticker or raw approach
-    RetentionVar<T> mReadMeasurement;
+    uint32_t mReadInterval;
+    uint32_t mlastReadMeasurement;
 
 public:
     explicit SensorBase(const char *name,
@@ -152,29 +151,29 @@ SensorBase<T>::SensorBase(const char *name,
                           const typename SensorInterface<T>::OnChangeFunc &onChangeFunc)
         :  SensorInterface<T>(name, readMeasurementFunc, sendMeasurementFunc, onChangeFunc),
            RetentionVar<T>(0, sendOnChangeRate, sendOnChangeAbs),
-           mReadMeasurement(readInterval) {
+           mReadInterval(readInterval),
+           mlastReadMeasurement(0) {
 }
 
 template<class T>
 void SensorBase<T>::loop() {
 
-    if (mReadMeasurement.checkTime()) {
+    uint32_t now = millis();
+
+    if (!mlastReadMeasurement || now - mlastReadMeasurement > mReadInterval) {
 
         T value = this->readMeasurement();
-
-        /* Homie.getLogger() << F("Read sensor ") << getName()
-                           << F(" each ") << mReadMeasurement.getGapTime()
-                           << F(" ms: ") << value << endl;*/
-
-        // Force a post-update
-        mReadMeasurement.setValue(value, ChangeValueReason::GAP_TIME);
+        mlastReadMeasurement = now;
 
         // Why using "this->": https://isocpp.org/wiki/faq/templates#nondependent-name-lookup-members
         ChangeValueReason reason = this->updateWithReason(value);
-        //Homie.getLogger() << this->getName() << F(" updated due reason: ") << reason << endl;
 
         if (static_cast<bool>(reason) && this->onChange(value)) {
             this->sendMeasurement(value);
+
+#ifdef DEBUG
+            Homie.getLogger() << F("Sensor ") << this->getName() << F(" updated due reason: ") << static_cast<uint8_t>(reason) << endl;
+#endif
         }
     }
 }
