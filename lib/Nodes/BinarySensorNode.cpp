@@ -1,7 +1,7 @@
 #include "BinarySensorNode.hpp"
 
 BinarySensorNode::BinarySensorNode(const char *id, const char *name,
-                                   uint8_t pin, uint8_t pinMode, uint16_t debounceInterval, uint8_t stateForTrue,
+                                   uint8_t pin, uint8_t pinMode, uint16_t debounceInterval, uint8_t stateForPressed,
                                    const SensorInterface<bool>::OnChangeFunc &onChangeFunc)
         : BaseNode(id, name, "binary"),
           SensorInterface<bool>(name, onChangeFunc),
@@ -10,7 +10,7 @@ BinarySensorNode::BinarySensorNode(const char *id, const char *name,
     // init Bounce2
     B2Button::attach(pin, pinMode);
     B2Button::interval(debounceInterval);
-    B2Button::setPressedState(stateForTrue);
+    B2Button::setPressedState(stateForPressed);
 
     advertise("state").setDatatype("boolean");
 }
@@ -21,20 +21,24 @@ void BinarySensorNode::loop() {
     if (B2Button::changed()) {
 
         bool state = readMeasurement();
-        sendMeasurement(state);
 
-        //printCaption();
-        Homie.getLogger() << cIndent << BaseNode::getName() << F(" is ") << (state ? F("true") : F("false")) << endl;
+        if (onChange(state)) {
+            sendMeasurement(state);
+
+            /*Homie.getLogger() << cIndent << BaseNode::getName()
+                              << F(" is ") << (state ? F("true") : F("false"))
+                              << endl;*/
+        }
     }
 }
 
 bool BinarySensorNode::readMeasurement() {
-    return (B2Button::read() == B2Button::getPressedState());
+    return B2Button::isPressed();
 }
 
 void BinarySensorNode::sendMeasurement(bool state) const {
 
-    if(onChange(state) && Homie.isConnected()) {
+    if (Homie.isConnected()) {
         setProperty("state").send(state ? F("true") : F("false"));
     }
 }

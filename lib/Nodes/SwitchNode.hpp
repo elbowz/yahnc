@@ -15,21 +15,18 @@
 
 class SwitchNode : public BaseNode {
 public:
-    typedef std::function<bool()> GetStateFunc;
-    typedef std::function<void(bool)> SetStateFunc;
-    typedef std::function<void(bool)> OnChangeFunc;
+    typedef std::function<bool()> GetHwStateFunc;
+    typedef std::function<void(bool)> SetHwStateFunc;
+    typedef std::function<bool(bool)> OnChangeFunc;
 
 private:
-    static const long cDefaultMaxTimeout = 600;
-
     int8_t mPin;
     uint8_t mOnValue;
     uint8_t mOffValue;
     Ticker mTicker;
-    HomieSetting<long> *mMaxTimeoutSetting;
     OnChangeFunc mOnChangeFunc;
-    SetStateFunc mSetStateFunc;
-    GetStateFunc mGetStateFunc;
+    SetHwStateFunc mSetHwStateFunc;
+    GetHwStateFunc mGetHwStateFunc;
 
 protected:
     bool handleInput(const HomieRange &range, const String &property, const String &value) override;
@@ -38,28 +35,24 @@ protected:
 
     void setup() override;
 
-    virtual void onChange(bool value);
-
-    void setStateWrapper(bool on);
-
-    bool getStateWrapper();
+    virtual bool onChange(bool value);
 
 public:
     explicit SwitchNode(const char *id,
                         const char *name,
                         int8_t pin = cDisabledPin,
                         bool reverseSignal = false,
-                        const SwitchNode::OnChangeFunc &onChangeFunc = [](bool value) {},
-                        const SwitchNode::SetStateFunc &setStateFunc = nullptr,
-                        const SwitchNode::GetStateFunc &getStateFunc = nullptr);
+                        const SwitchNode::OnChangeFunc &onChangeFunc = [](bool value) { return true; },
+                        const SwitchNode::SetHwStateFunc &setHwStateFunc = nullptr,
+                        const SwitchNode::GetHwStateFunc &getHwStateFunc = nullptr);
 
-    SwitchNode &setGetStateFunc(const GetStateFunc &func) {
-        mGetStateFunc = func;
+    SwitchNode &setGetHwStateFunc(const GetHwStateFunc &func) {
+        mGetHwStateFunc = func;
         return *this;
     }
 
-    SwitchNode &setSetStateFunc(const SetStateFunc &func) {
-        mSetStateFunc = func;
+    SwitchNode &setSetHwStateFunc(const SetHwStateFunc &func) {
+        mSetHwStateFunc = func;
         return *this;
     }
 
@@ -68,18 +61,43 @@ public:
         return *this;
     }
 
-    /**
-     * Get switch state logic. Overriding if you need to change it or set by constructor/setGetStateFunc
-     * @return switch state, not the pin value (ie. LOW/HIGH)
-     */
-    virtual bool getState();
+    void stopTimeout();
 
     /**
-     * Set switch state logic. Overriding if you need to change it or set by constructor/setSetStateFunc
-     * @param on switch state, note the pin value (ie. LOW/HIGH)
+     * Get pin/hw state. Overriding if you need to change it or set by constructor/setGetHwStateFunc
+     * @return state, not the pin value (ie. LOW/HIGH)
      */
-    virtual void setState(bool on);
+    virtual bool getHwState();
 
-    void setTimeout(uint32_t timeout = 0);
+    /**
+     * Set pin/hw state. Overriding if you need to change it or set by constructor/setSetHwStateFunc
+     * @param on switch state, not the pin value (ie. LOW/HIGH)
+     */
+    virtual void setHwState(bool on);
+
+    /**
+    * Set pin/hw state and update mqtt.
+    * @param on state, not the pin value (ie. LOW/HIGH)
+    */
+    void setState(bool on);
+
+    /**
+     * alias of getHwState()
+     * @return state, not the pin value (ie. LOW/HIGH)
+     */
+    bool getState();
+
+    /**
+     * Set endState after a predefined seconds
+     * @param seconds delay in s
+     * @param endState state to set at the end of time
+     * @param killOther true, take place of current timer (if exist)
+     */
+    void setTimeout(uint32_t seconds = 0, bool endState = false);
+
+    /**
+     * Same of setTimeout with a pre call to setState
+     */
+    void setTimeoutWithInit(uint32_t seconds = 0, bool startState = true, bool endState = false);
 
 };

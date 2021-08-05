@@ -22,7 +22,7 @@ protected:
 public:
     explicit BinarySensorNode(const char *id, const char *name,
                               uint8_t pin, uint8_t pinMode = INPUT_PULLUP,
-                              uint16_t debounceInterval = 10, uint8_t stateForTrue = LOW,
+                              uint16_t debounceInterval = 10, uint8_t stateForPressed = LOW,
                               const SensorInterface<bool>::OnChangeFunc &onChangeFunc = [](bool value) { return true; });
 };
 

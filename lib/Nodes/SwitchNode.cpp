@@ -1,47 +1,42 @@
+#include <Asprintf_P.h>
+
 #include "SwitchNode.hpp"
 
-//TODO:
-// * pass node id to mSetStateFunc, mGetStateFunc
-// * allow to check state from external modification (light impulsive switch): state from another pin, loop on getState and setState normal/only mqtt topic
-// * implement onChange directly in RetentionVar
+/**
+ * TODO:
+ * pass node id to mSetStateFunc, mGetStateFunc
+ * allow to check state from external modification (light impulsive switch): state from another pin, loop on getState and setState normal/only mqtt topic
+ * implement onChange directly in RetentionVar
+ */
 
 SwitchNode::SwitchNode(const char *id, const char *name, int8_t pin, bool reverseSignal,
                        const SwitchNode::OnChangeFunc &onChangeFunc,
-                       const SwitchNode::SetStateFunc &setStateFunc,
-                       const SwitchNode::GetStateFunc &getStateFunc)
+                       const SwitchNode::SetHwStateFunc &setHwStateFunc,
+                       const SwitchNode::GetHwStateFunc &getHwStateFunc)
         : BaseNode(id, name, "switch"),
           mPin(pin),
           mOnChangeFunc(onChangeFunc),
-          mSetStateFunc(setStateFunc),
-          mGetStateFunc(getStateFunc) {
+          mSetHwStateFunc(setHwStateFunc),
+          mGetHwStateFunc(getHwStateFunc) {
 
     //asprintf(&_caption, "• %s relay pin[%d]:", name, pin);
 
     mOnValue = reverseSignal ? LOW : HIGH;
     mOffValue = !mOnValue;
 
-    auto maxTimeoutName = String(id) + ".maxTimeout";
-    mMaxTimeoutSetting = new HomieSetting<long>(maxTimeoutName.c_str(),
-                                                "The maximum timeout for the relay in seconds [0 .. Max(long)] Default = 600 (10 minutes)");
-
-    mMaxTimeoutSetting->setDefaultValue(cDefaultMaxTimeout).setValidator([](long candidate) {
-        return (candidate >= 0);
-    });
-
-    // note: inputHandler is set and handleInput return false
-    // to still allow the externally use of "SwitchNode::getProperty("on")->settable(lightOnHandler)" by user
+    // note: inputHandler is set and handleInput return true
+    // to still allow the external use of "SwitchNode::getProperty("on")->settable(lightOnHandler)" by user
     advertise("on")
             .setDatatype("boolean")
-            .settable([](const HomieRange& range, const String& value) { return true; });
+            .settable([](const HomieRange &range, const String &value) { return true; });
 
-    static char format[15];
-    snprintf(format, 15, "0:%ld", mMaxTimeoutSetting->get());
-    //static const char *format = String(String("0:") + mMaxTimeoutSetting->get()).c_str();
+    char *format;
+    asprintf(&format, F("0:%lld"), ULONG_MAX);
 
     advertise("timeout")
             .setDatatype("integer")
             .setFormat(format)
-            .settable([](const HomieRange& range, const String& value) { return true; });
+            .settable([](const HomieRange &range, const String &value) { return true; });
 }
 
 void SwitchNode::setup() {
@@ -51,8 +46,9 @@ void SwitchNode::setup() {
 }
 
 void SwitchNode::onReadyToOperate() {
+
     // TODO: retrieve value from mqtt or set the start default value
-    setStateWrapper(false);
+    setState(false);
     setTimeout(0);
 };
 
@@ -62,8 +58,8 @@ bool SwitchNode::handleInput(const HomieRange &range, const String &property, co
 
         if (value != "true" && value != "false" && value != "toggle") return false;
 
-        bool newStatus = (value == "toggle" ? !getStateWrapper() : value == "true");
-        setStateWrapper(newStatus);
+        bool newStatus = (value == "toggle" ? !getState() : value == "true");
+        setState(newStatus);
 
         return false;
 
@@ -72,8 +68,7 @@ bool SwitchNode::handleInput(const HomieRange &range, const String &property, co
         uint32_t timeout = value.toInt();
         if (value != String(timeout) && timeout <= 0) return false;
 
-        setStateWrapper(true);
-        setTimeout(timeout);
+        setTimeoutWithInit(timeout, true, false);
 
         return false;
     }
@@ -81,17 +76,23 @@ bool SwitchNode::handleInput(const HomieRange &range, const String &property, co
     return false;
 }
 
-void SwitchNode::setStateWrapper(bool on) {
-    setState(on);
-    onChange(on);
-    setProperty("on").send(getStateWrapper() ? "true" : "false");
+void SwitchNode::setState(bool on) {
+
+    if (onChange(on)) {
+        setHwState(on);
+    }
 
     Homie.getLogger() << cIndent << F("is ") << (on ? F("on") : F("off")) << endl;
+
+    if (Homie.isConnected()) {
+        setProperty("on").send(getState() ? "true" : "false");
+    }
 }
 
-void SwitchNode::setState(bool on) {
-    if (mSetStateFunc) {
-        mSetStateFunc(on);
+void SwitchNode::setHwState(bool on) {
+
+    if (mSetHwStateFunc) {
+        mSetHwStateFunc(on);
     } else if (mPin > cDisabledPin) {
         digitalWrite(mPin, on ? mOnValue : mOffValue);
     } else {
@@ -99,14 +100,15 @@ void SwitchNode::setState(bool on) {
     }
 }
 
-// Exist only to allow the inheritance of getState() by the user
-inline bool SwitchNode::getStateWrapper() {
-    return getState();
+// Exist only to allow the inheritance of getHwState() by the user
+inline bool SwitchNode::getState() {
+    return getHwState();
 }
 
-bool SwitchNode::getState() {
-    if (mGetStateFunc) {
-        return mGetStateFunc();
+bool SwitchNode::getHwState() {
+
+    if (mGetHwStateFunc) {
+        return mGetHwStateFunc();
     } else if (mPin > cDisabledPin) {
         return (digitalRead(mPin) == mOnValue);
     } else {
@@ -115,22 +117,34 @@ bool SwitchNode::getState() {
     return false;
 }
 
-void SwitchNode::setTimeout(uint32_t timeout) {
-    bool currentState = getStateWrapper();
-    String stringTimeout = String(timeout);
+void SwitchNode::setTimeoutWithInit(uint32_t seconds, bool startState, bool endState) {
 
-    setProperty("timeout").send(String(timeout));
-    Homie.getLogger() << cIndent << F("timeout: ") << stringTimeout << endl;
+    setState(startState);
+    setTimeout(seconds, endState);
+}
 
-    if (timeout) {
-        mTicker.once_scheduled(1, std::bind(&SwitchNode::setTimeout, this, timeout-1));
+void SwitchNode::setTimeout(uint32_t seconds, bool endState) {
+
+    String stringTimeout = String(seconds);
+    Homie.getLogger() << cIndent << F("seconds: ") << stringTimeout << endl;
+
+    if (Homie.isConnected()) {
+        setProperty("timeout").send(String(seconds));
+    }
+
+    if (seconds > 0) {
+        mTicker.once_scheduled(1, std::bind(&SwitchNode::setTimeout, this, seconds - 1, endState));
     } else {
-        if (currentState) setStateWrapper(false);
+        if (getHwState() != endState) setState(endState);
     }
 }
 
-void SwitchNode::onChange(bool value) {
-    mOnChangeFunc(value);
+bool SwitchNode::onChange(bool value) {
+    return mOnChangeFunc(value);
+}
+
+void SwitchNode::stopTimeout() {
+    mTicker.detach();
 }
 
 

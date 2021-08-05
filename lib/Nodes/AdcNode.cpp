@@ -4,42 +4,34 @@ extern int __get_adc_mode();
 
 AdcNode::AdcNode(const char *id, const char *name,
                  uint32_t readInterval, float sendOnChangeAbs,
-                 const AdcNode::BeforeSendFunc &beforeSendFunc,
-                 const SensorInterface<float>::OnChangeFunc &onChangeFunc)
-        : BaseNode(id, name, "adcNode"),
-          SensorBase(name, readInterval, 0, sendOnChangeAbs, nullptr, nullptr, onChangeFunc),
-          mBeforeSendFunc(beforeSendFunc) {
+                 const SensorBase<float>::OnChangeFunc &onChangeFunc)
+        : BaseNode(id, name, "photoresistorNode"),
+          SensorBase(name, readInterval, 0, sendOnChangeAbs, nullptr, nullptr, onChangeFunc) {
 
+    // ADC pin used to measure VCC (e.g. on battery)
     // true if previously called macro ADC_MODE(ADC_VCC)
     mReadVcc = __get_adc_mode() == ADC_VCC;
-
-    advertise(cVoltageTopic)
-            .setDatatype("float")
-            .setFormat("??:??")
-            .setUnit(cUnitVolt);
-}
-
-void AdcNode::loop() {
-    // Call loop ONLY if connected to MQTT
-    if(Homie.isConnected()) SensorBase::loop();
 }
 
 void AdcNode::setup() {
-    HomieNode::setup();
+
+    advertise(cVoltageTopic)
+    .setDatatype("float")
+    .setFormat("0:1.00")
+    .setUnit(cUnitVolt);
 }
 
-void AdcNode::onReadyToOperate() {
-    HomieNode::onReadyToOperate();
+void AdcNode::loop() {
+    SensorBase::loop();
 }
 
 float AdcNode::readMeasurement() {
-    //Homie.getLogger() << "READ VALUE " << static_cast<float>(mReadVcc ? ESP.getVcc() : analogRead(A0)) / 1024.0f << endl;
     return static_cast<float>(mReadVcc ? ESP.getVcc() : analogRead(A0)) / 1024.0f;
 }
 
 void AdcNode::sendMeasurement(float value) const {
-    if (onChange(value)) {
-        value = mBeforeSendFunc(value);
+
+    if(Homie.isConnected()) {
         setProperty(cVoltageTopic).send(String(value));
     }
 }

@@ -7,8 +7,6 @@
 #include "SensorBase.hpp"
 #include "PressureSensor.hpp"
 
-class PressureSensor;
-
 /**
  * TODO:
  * * create a MultiSensorNode that aggregate SensorBase through a std::vector<SensorBase*> sensors.
@@ -16,11 +14,15 @@ class PressureSensor;
  * * move all advertise in setup() ?
  */
 
+class PressureSensor;
+
 class BME280Node : public BaseNode {
 private:
+    static constexpr double cDefaultTempOffset = 0.0f;
+
     uint8_t mI2cAddress;
     bool mSensorFound = false;
-    HomieSetting<double> *mTempOffsetSetting;
+    HomieSetting<double> *mSettingTempOffset;
 
     Adafruit_BME280 bme280;
     Adafruit_BME280::sensor_sampling mTempSampling;
@@ -28,10 +30,10 @@ private:
     Adafruit_BME280::sensor_sampling mHumSampling;
     Adafruit_BME280::sensor_filter mFilter;
 
-    // Different ways to add/use sensors to the node
+    // Different ways to add/use sensors to a node
     friend class PressureSensor;
 
-    class Temperature : public SensorBase<float> {
+    class TemperatureSensor : public SensorBase<float> {
     private:
         BME280Node &mNode;
         Adafruit_Sensor *mAdafruitSensor;
@@ -42,10 +44,14 @@ private:
         void sendMeasurement(float value) const override;
 
     public:
-        explicit Temperature(BME280Node &node, const char *name = cTemperatureTopic, uint32_t readInterval = 4 * 1000UL, uint8_t sendOnChangeRate = 0, float sendOnChangeAbs = 0.1);
+        explicit TemperatureSensor(BME280Node &node, const char *name = cTemperatureTopic, uint32_t readInterval = 4 * 1000UL, uint8_t sendOnChangeRate = 0, float sendOnChangeAbs = 0.1);
 
         void setup();
     };
+
+    TemperatureSensor mTempSensor;
+    PressureSensor *mPressureSensor;
+    SensorBase<float> mHumiditySensor;
 
 protected:
     void setup() override;
@@ -59,10 +65,6 @@ protected:
     float readHumidity();
 
 public:
-    Temperature mTempSensor;
-    PressureSensor *mPressureSensor;
-    SensorBase<float> mHumiditySensor;
-
     explicit BME280Node(const char *id,
                         const char *name,
                         uint8_t i2cAddress = 0x76,

@@ -74,7 +74,9 @@ public:
 
     operator T() const { return mValue; }
 
-    T value() const { return mValue; }
+    inline T value() const { return get(); }
+
+    T get() const { return mValue; }
 
     uint32_t getGapTime() const { return mGapTime; }
 

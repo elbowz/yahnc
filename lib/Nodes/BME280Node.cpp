@@ -1,3 +1,5 @@
+#include <Asprintf_P.h>
+
 #include "BME280Node.hpp"
 
 BME280Node::BME280Node(const char *id,
@@ -25,12 +27,20 @@ BME280Node::BME280Node(const char *id,
 
     mPressureSensor = new PressureSensor(*this);
 
-    auto tempOffsetName = String(id) + ".temperatureOffset";
-    mTempOffsetSetting = new HomieSetting<double>(tempOffsetName.c_str(),
-                                                  "The temperature offset in degrees [-10.0, 10.0] Default = 0");
+    // TODO: call free() or use std::unique_ptr<>/std::shared_ptr<Base>
+    // note: this object will be destroyed only on reset of ESP8266 (ie. not necessary to free up memory)
+    //free((void *) mSettingTempOffset->getName()); free((void *) mSettingTempOffset->getDescription());
+    //std::shared_ptr<char> test(new char[strlen_P(cSettingTempOffsetName)+2], std::default_delete<char[]>());
 
-    mTempOffsetSetting
-            ->setDefaultValue(0.0f)
+    char *settingName;
+    char *settingDescription;
+    asprintf(&settingName, F("%s.temperatureOffset"), id);
+    asprintf(&settingDescription, F("The temperature offset in degrees [-10.0, 10.0] Default = %f"), cDefaultTempOffset);
+
+    mSettingTempOffset = new HomieSetting<double>(settingName, settingDescription);
+
+    mSettingTempOffset
+            ->setDefaultValue(cDefaultTempOffset)
             .setValidator([](float candidate) {
                 return (candidate >= -10.0f) && (candidate <= 10.0f);
             });
@@ -66,7 +76,7 @@ void BME280Node::setup() {
         Homie.getLogger() << cIndent << F("found. Reading interval: ") << 300 << " s" << endl;
 
         bme280.setSampling(Adafruit_BME280::MODE_FORCED, mTempSampling, mPressSampling, mHumSampling, mFilter);
-        bme280.setTemperatureCompensation(static_cast<float>(mTempOffsetSetting->get()));
+        bme280.setTemperatureCompensation(static_cast<float>(mSettingTempOffset->get()));
 
         auto mAdafruitSensor = bme280.getHumiditySensor();
         mAdafruitSensor->printSensorDetails();
@@ -78,6 +88,9 @@ void BME280Node::setup() {
         mSensorFound = false;
         Homie.getLogger() << cIndent << F("not found. Check wiring!") << endl;
     }
+
+    // TODO: maybe we can clear the setting name/description there
+    // free((void *) mSettingTempOffset->getName()); free((void *) mSettingTempOffset->getDescription());
 }
 
 /*
@@ -90,7 +103,7 @@ void BME280Node::onReadyToOperate() {
 }
 
 /*
- * Called EVERYTIME, when the device is in normal mode (after configuration si done)
+ * Continually called when the device is in normal mode (after configuration and connection is done)
  */
 void BME280Node::loop() {
 
@@ -120,7 +133,7 @@ float BME280Node::readHumidity() {
     return bme280.readHumidity();
 }
 
-BME280Node::Temperature::Temperature(BME280Node &node, const char *name, uint32_t readInterval, uint8_t sendOnChangeRate, float sendOnChangeAbs)
+BME280Node::TemperatureSensor::TemperatureSensor(BME280Node &node, const char *name, uint32_t readInterval, uint8_t sendOnChangeRate, float sendOnChangeAbs)
         : SensorBase<float>(name, readInterval, sendOnChangeRate, sendOnChangeAbs),
           mNode(node) {
 
@@ -128,9 +141,8 @@ BME280Node::Temperature::Temperature(BME280Node &node, const char *name, uint32_
     mAdafruitSensor = mNode.bme280.getTemperatureSensor();
     mAdafruitSensor->getSensor(&sensor);
 
-    // TODO: Something better then "static" to preserve variable for async execution of .advertise() ?
-    static char format[20];
-    snprintf(format, sizeof(format), "%2.2f:%2.2f", sensor.min_value, sensor.max_value);
+    char *format;
+    asprintf(&format, F("%2.2f:%2.2f"), sensor.min_value, sensor.max_value);
 
     mNode.advertise(getName())
             .setDatatype("float")
@@ -143,11 +155,11 @@ BME280Node::Temperature::Temperature(BME280Node &node, const char *name, uint32_
             .setUnit(cUnitDegrees);
 }
 
-void BME280Node::Temperature::setup() {
+void BME280Node::TemperatureSensor::setup() {
     mAdafruitSensor->printSensorDetails();
 }
 
-float BME280Node::Temperature::readMeasurement() {
+float BME280Node::TemperatureSensor::readMeasurement() {
     //sensors_event_t temperature;
     //mAdafruitSensor->getEvent(&temperature);
 
@@ -155,7 +167,7 @@ float BME280Node::Temperature::readMeasurement() {
     return mNode.bme280.readTemperature();
 }
 
-void BME280Node::Temperature::sendMeasurement(float value) const {
+void BME280Node::TemperatureSensor::sendMeasurement(float value) const {
 
     Homie.getLogger() << mNode.cIndent << getName() << F(": ") << value << " " << cUnitDegrees << " due reason: " << (int) mUpdateReason << endl;
     float heatIndex = EnvironmentCalculations::HeatIndex(value, mNode.mHumiditySensor, EnvironmentCalculations::TempUnit_Celsius);

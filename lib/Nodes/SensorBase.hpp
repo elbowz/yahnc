@@ -29,25 +29,11 @@ protected:
     OnChangeFunc mOnChangeFunc;
 
     /**
-     * Called to take/read the measurement and return the value
-     * This function can be set or override through inheritance way.
-     * @return read value
-     */
-    virtual T readMeasurement();
-
-    /**
-     * Called to send the measurement
-     * This function can be set or override through inheritance way.
-     * @return read value
-     */
-    virtual void sendMeasurement(T value) const;
-
-    /**
      * Called on measurement change
      * This function can be set or override through inheritance way.
      * @return true to allow the sendMeasurement invocation
      */
-    virtual bool onChange(T value) const;
+    virtual bool onChange(T value);
 
 public:
     explicit SensorInterface(const char *name,
@@ -58,7 +44,23 @@ public:
     explicit SensorInterface(const char *name,
                              const OnChangeFunc &onChangeFunc = [](bool value) { return true; });
 
-    virtual void loop() = 0;
+    const char *getName() const {
+        return mName;
+    }
+
+    /**
+    * Called to take/read the measurement and return the value
+    * This function can be set or override through inheritance way.
+    * @return read value
+    */
+    virtual T readMeasurement();
+
+    /**
+     * Called to send the measurement
+     * This function can be set or override through inheritance way.
+     * @return read value
+     */
+    virtual void sendMeasurement(T value) const;
 
     SensorInterface<T> &setReadMeasurementFunc(const ReadMeasurementFunc &func) {
         mReadMeasurementFunc = func;
@@ -74,17 +76,13 @@ public:
         mOnChangeFunc = func;
         return *this;
     }
-
-    const char *getName() const {
-        return mName;
-    }
 };
 
 template<class T>
 SensorInterface<T>::SensorInterface(const char *name,
                                     const SensorInterface::ReadMeasurementFunc &readMeasurementFunc,
                                     const SensorInterface::SendMeasurementFunc &sendMeasurementFunc,
-                                    const OnChangeFunc &onChangeFunc)
+                                    const SensorInterface::OnChangeFunc &onChangeFunc)
         : mName(name),
           mReadMeasurementFunc(readMeasurementFunc),
           mSendMeasurementFunc(sendMeasurementFunc),
@@ -109,11 +107,11 @@ void SensorInterface<T>::sendMeasurement(T value) const {
         HomieInternals::Helpers::abort(F("✖ SendMeasurementFunc() is not set!"));
     }
 
-    if (onChange(value)) mSendMeasurementFunc(value);
+    mSendMeasurementFunc(value);
 }
 
 template<class T>
-bool SensorInterface<T>::onChange(T value) const {
+bool SensorInterface<T>::onChange(T value) {
     return mOnChangeFunc(value);
 }
 
@@ -121,7 +119,7 @@ bool SensorInterface<T>::onChange(T value) const {
 template<class T>
 class SensorBase : public SensorInterface<T>, public RetentionVar<T> {
 protected:
-    // note: overkilled use of RetentionVar...better HomieInternals::Timer
+    // note: overkilled use of RetentionVar...better HomieInternals::Timer, Ticker or raw approach
     RetentionVar<T> mReadMeasurement;
 
 public:
@@ -132,6 +130,10 @@ public:
                         const typename SensorInterface<T>::ReadMeasurementFunc &readMeasurementFunc = nullptr,
                         const typename SensorInterface<T>::SendMeasurementFunc &sendMeasurementFunc = nullptr,
                         const typename SensorInterface<T>::OnChangeFunc &onChangeFunc = [](bool value) { return true; });
+
+    virtual void setup() {};
+
+    virtual void onReadyToOperate() {};
 
     virtual void loop();
 };
@@ -169,9 +171,9 @@ void SensorBase<T>::loop() {
 
         // Why using "this->": https://isocpp.org/wiki/faq/templates#nondependent-name-lookup-members
         ChangeValueReason reason = this->updateWithReason(value);
+        //Homie.getLogger() << this->getName() << F(" updated due reason: ") << reason << endl;
 
-        if (static_cast<bool>(reason)) {
-            // TODO: move on change here
+        if (static_cast<bool>(reason) && this->onChange(value)) {
             this->sendMeasurement(value);
         }
     }
