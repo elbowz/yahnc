@@ -1,6 +1,7 @@
 #pragma once
 
 #include <BaseNode.hpp>
+#include <ActuatorBase.hpp>
 
 /**
  * TODO:
@@ -9,24 +10,15 @@
  *      * state from another pin
  *      * loop on getHwState
  *      note: maybe a new class that inherit form SwitchNode and BinarySensorNode?
- * * inherit from SensorInterface (getHwState => readMeasuremente, onChange, part of setState => sendMeasurement)
  * * rename to BinaryOutNode
  */
 
-class SwitchNode : public BaseNode {
-public:
-    typedef std::function<bool()> GetHwStateFunc;
-    typedef std::function<void(bool)> SetHwStateFunc;
-    typedef std::function<bool(bool)> OnChangeFunc;
-
+class SwitchNode : public BaseNode, public ActuatorBase<bool> {
 private:
     int8_t mPin;
     uint8_t mOnValue;
     uint8_t mOffValue;
     Ticker mTicker;
-    OnChangeFunc mOnChangeFunc;
-    SetHwStateFunc mSetHwStateFunc;
-    GetHwStateFunc mGetHwStateFunc;
 
 protected:
     bool handleInput(const HomieRange &range, const String &property, const String &value) override;
@@ -35,57 +27,29 @@ protected:
 
     void setup() override;
 
-    virtual bool onChange(bool value);
-
 public:
     explicit SwitchNode(const char *id,
                         const char *name,
                         int8_t pin = cDisabledPin,
                         bool reverseSignal = false,
-                        const SwitchNode::OnChangeFunc &onChangeFunc = [](bool value) { return true; },
-                        const SwitchNode::SetHwStateFunc &setHwStateFunc = nullptr,
-                        const SwitchNode::GetHwStateFunc &getHwStateFunc = nullptr);
-
-    SwitchNode &setGetHwStateFunc(const GetHwStateFunc &func) {
-        mGetHwStateFunc = func;
-        return *this;
-    }
-
-    SwitchNode &setSetHwStateFunc(const SetHwStateFunc &func) {
-        mSetHwStateFunc = func;
-        return *this;
-    }
-
-    SwitchNode &setOnChangeFunc(const OnChangeFunc &func) {
-        mOnChangeFunc = func;
-        return *this;
-    }
-
-    void stopTimeout();
+                        const OnSetFunc &onSetFunc = [](bool value) { return true; },
+                        const GetStateFunc &getStateFunc = nullptr,
+                        const SetHwStateFunc &setHwStateFunc = nullptr,
+                        const SendStateFunc &sendStateFunc = nullptr);
 
     /**
-     * Get pin/hw state. Overriding if you need to change it or set by constructor/setGetHwStateFunc
+     * Get pin/hw state.
+     * Overriding if you need to change it or set by constructor/getStateFunc
      * @return state, not the pin value (ie. LOW/HIGH)
      */
-    virtual bool getHwState();
+    bool getState() override;
 
     /**
-     * Set pin/hw state. Overriding if you need to change it or set by constructor/setSetHwStateFunc
+     * Set pin/hw state.
+     * Overriding if you need to change it or set by constructor/setHwStateFunc
      * @param on switch state, not the pin value (ie. LOW/HIGH)
      */
-    virtual void setHwState(bool on);
-
-    /**
-    * Set pin/hw state and update mqtt.
-    * @param on state, not the pin value (ie. LOW/HIGH)
-    */
-    void setState(bool on);
-
-    /**
-     * alias of getHwState()
-     * @return state, not the pin value (ie. LOW/HIGH)
-     */
-    bool getState();
+    void setHwState(bool on) const override;
 
     /**
      * Set endState after a predefined seconds
@@ -100,4 +64,5 @@ public:
      */
     void setTimeoutWithInit(uint32_t seconds = 0, bool startState = true, bool endState = false);
 
+    void stopTimeout();
 };

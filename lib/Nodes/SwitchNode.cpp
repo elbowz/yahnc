@@ -2,47 +2,39 @@
 
 #include "SwitchNode.hpp"
 
-/**
- * TODO:
- * pass node id to mSetStateFunc, mGetStateFunc
- * allow to check state from external modification (light impulsive switch): state from another pin, loop on getState and setState normal/only mqtt topic
- * implement onChange directly in RetentionVar
- */
-
 SwitchNode::SwitchNode(const char *id, const char *name, int8_t pin, bool reverseSignal,
-                       const SwitchNode::OnChangeFunc &onChangeFunc,
-                       const SwitchNode::SetHwStateFunc &setHwStateFunc,
-                       const SwitchNode::GetHwStateFunc &getHwStateFunc)
+                       const OnSetFunc &onSetFunc,
+                       const GetStateFunc &getStateFunc,
+                       const SetHwStateFunc &setHwStateFunc,
+                       const SendStateFunc &sendStateFunc)
         : BaseNode(id, name, "switch"),
-          mPin(pin),
-          mOnChangeFunc(onChangeFunc),
-          mSetHwStateFunc(setHwStateFunc),
-          mGetHwStateFunc(getHwStateFunc) {
+          ActuatorBase<bool>(name, onSetFunc, getStateFunc, setHwStateFunc, sendStateFunc),
+          mPin(pin) {
 
     //asprintf(&_caption, "• %s relay pin[%d]:", name, pin);
 
     mOnValue = reverseSignal ? LOW : HIGH;
     mOffValue = !mOnValue;
-
-    // note: inputHandler is set and handleInput return true
-    // to still allow the external use of "SwitchNode::getProperty("on")->settable(lightOnHandler)" by user
-    advertise("on")
-            .setDatatype("boolean")
-            .settable([](const HomieRange &range, const String &value) { return true; });
-
-    char *format;
-    asprintf(&format, F("0:%lld"), ULONG_MAX);
-
-    advertise("timeout")
-            .setDatatype("integer")
-            .setFormat(format)
-            .settable([](const HomieRange &range, const String &value) { return true; });
 }
 
 void SwitchNode::setup() {
     if (mPin > cDisabledPin) {
         pinMode(mPin, OUTPUT);
     }
+
+    // note: inputHandler is set and handleInput return true
+    // to still allow the external use of "SwitchNode::getProperty("on")->settable(lightOnHandler)" by user
+    advertise("on")
+    .setDatatype("boolean")
+    .settable([](const HomieRange &range, const String &value) { return true; });
+
+    char *format;
+    asprintf(&format, F("0:%lld"), ULONG_MAX);
+
+    advertise("timeout")
+    .setDatatype("integer")
+    .setFormat(format)
+    .settable([](const HomieRange &range, const String &value) { return true; });
 }
 
 void SwitchNode::onReadyToOperate() {
@@ -76,44 +68,27 @@ bool SwitchNode::handleInput(const HomieRange &range, const String &property, co
     return false;
 }
 
-void SwitchNode::setState(bool on) {
-
-    if (onChange(on)) {
-        setHwState(on);
-    }
-
-    Homie.getLogger() << cIndent << F("is ") << (on ? F("on") : F("off")) << endl;
-
-    if (Homie.isConnected()) {
-        setProperty("on").send(getState() ? "true" : "false");
-    }
-}
-
-void SwitchNode::setHwState(bool on) {
+void SwitchNode::setHwState(bool on) const {
 
     if (mSetHwStateFunc) {
         mSetHwStateFunc(on);
     } else if (mPin > cDisabledPin) {
         digitalWrite(mPin, on ? mOnValue : mOffValue);
     } else {
-        HomieInternals::Helpers::abort(F("✖ pin and setStateFunc() are both not set!"));
+        HomieInternals::Helpers::abort(F("✖ pin and setHwStateFunc() are both not set!"));
     }
 }
 
-// Exist only to allow the inheritance of getHwState() by the user
-inline bool SwitchNode::getState() {
-    return getHwState();
-}
+bool SwitchNode::getState() {
 
-bool SwitchNode::getHwState() {
-
-    if (mGetHwStateFunc) {
-        return mGetHwStateFunc();
+    if (mGetStateFunc) {
+        return mGetStateFunc();
     } else if (mPin > cDisabledPin) {
         return (digitalRead(mPin) == mOnValue);
     } else {
         HomieInternals::Helpers::abort(F("✖ pin and getStateFunc() are both not set!"));
     }
+
     return false;
 }
 
@@ -135,12 +110,8 @@ void SwitchNode::setTimeout(uint32_t seconds, bool endState) {
     if (seconds > 0) {
         mTicker.once_scheduled(1, std::bind(&SwitchNode::setTimeout, this, seconds - 1, endState));
     } else {
-        if (getHwState() != endState) setState(endState);
+        if (getState() != endState) setState(endState);
     }
-}
-
-bool SwitchNode::onChange(bool value) {
-    return mOnChangeFunc(value);
 }
 
 void SwitchNode::stopTimeout() {
