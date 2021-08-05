@@ -59,7 +59,7 @@ int vasprintf_P(char **str, const char *formatP, va_list ap) {
 
     // format string with original
     // variadic arguments and set new size
-    size = vsnprintf_P(*str, size, formatP, ap);
+    size = vsnprintf_P(*str, size + 1, formatP, ap);
     return size;
 }
 
