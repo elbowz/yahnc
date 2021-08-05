@@ -52,6 +52,13 @@ public:
     void setHwState(bool on) const override;
 
     /**
+     * Send/setProperty
+     * Overriding if you need to change it or set by constructor/setSendStateFunc
+     * @param on switch state, not the pin value (ie. LOW/HIGH)
+     */
+    void sendState(bool value) const override;
+
+    /**
      * Set endState after a predefined seconds
      * @param seconds delay in s
      * @param endState state to set at the end of time

@@ -68,17 +68,6 @@ bool SwitchNode::handleInput(const HomieRange &range, const String &property, co
     return false;
 }
 
-void SwitchNode::setHwState(bool on) const {
-
-    if (mSetHwStateFunc) {
-        mSetHwStateFunc(on);
-    } else if (mPin > cDisabledPin) {
-        digitalWrite(mPin, on ? mOnValue : mOffValue);
-    } else {
-        HomieInternals::Helpers::abort(F("✖ pin and setHwStateFunc() are both not set!"));
-    }
-}
-
 bool SwitchNode::getState() {
 
     if (mGetStateFunc) {
@@ -90,6 +79,24 @@ bool SwitchNode::getState() {
     }
 
     return false;
+}
+
+void SwitchNode::setHwState(bool on) const {
+
+    if (mSetHwStateFunc) {
+        mSetHwStateFunc(on);
+    } else if (mPin > cDisabledPin) {
+        digitalWrite(mPin, on ? mOnValue : mOffValue);
+    } else {
+        HomieInternals::Helpers::abort(F("✖ pin and setHwStateFunc() are both not set!"));
+    }
+}
+
+void SwitchNode::sendState(bool value) const {
+
+    if (Homie.isConnected()) {
+        setProperty("on").send(value ? "true" : "false");
+    }
 }
 
 void SwitchNode::setTimeoutWithInit(uint32_t seconds, bool startState, bool endState) {
