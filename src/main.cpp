@@ -135,19 +135,44 @@ bool buzzerHandler(const HomieRange &range, const String &property, const String
             // Melody name (between predefined ones)
 
             auto melody = rtttlMelodies.find(value.c_str());
-            if (melody == rtttlMelodies.end()) return false;
+            if (melody == rtttlMelodies.end()) { return true; }
 
             rtttl::begin(PIN_BUZZER, melody->second);
         } else {
             // Custom melody json
-            // TODO: add repeat and json decode
+            StaticJsonDocument<256> doc;
+
+            deserializeJson(doc, value);
+
+            JsonObjectConst json = doc.as<JsonObject>();
+
+            const char *rtttl;
+
+            if (json.containsKey(F("preset"))) {
+
+                auto melodyIterator = rtttlMelodies.find(json[F("preset")]);
+                if (melodyIterator == rtttlMelodies.end()) return true;
+
+                rtttl = melodyIterator->second;
+
+            } else if (json.containsKey(F("rtttl"))) {
+                rtttl = json[F("rtttl")];
+
+            } else {
+                return true;
+            }
+
+            uint8_t loopCount = json[F("loop-count")] | 1;
+            uint16_t loopGap = json[F("loop-gap")] | 0;
+
+            rtttl::begin(PIN_BUZZER, rtttl, loopCount, loopGap);
         }
 
         return true;
 
     } else if (property == "stop") {
 
-        if (value != "true") return false;
+        if (value != "true") return true;
 
         rtttl::stop();
 
@@ -175,7 +200,7 @@ bool buttonHandler(const ButtonEvent &event) {
             break;
         case ButtonEventType::MULTI_PRESS_COUNT:
         case ButtonEventType::MULTI_PRESS_INTERVAL:
-            rtttl::begin(PIN_BUZZER, rtttlMelodies.find("tetris")->second, event.pressCount, 2000);
+            if (event.pressCount > 1) rtttl::begin(PIN_BUZZER, rtttlMelodies.find("tetris")->second, event.pressCount, 2000);
             break;
         default:
             break;
@@ -195,7 +220,7 @@ bool motionHandler(bool state) {
                       << endl;
 
     // Switch on light on motion and darkly
-    if(state && photoresistorNode.value() < maxLux) {
+    if (state && photoresistorNode.value() < maxLux) {
         ledNode.stopTimeout();
         ledNode.setState(true);
     } else if (!state) {
