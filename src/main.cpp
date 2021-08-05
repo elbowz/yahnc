@@ -48,7 +48,7 @@ std::map<const String, const char *> rtttlMelodies = {
 };
 
 #define SETTING_LIGHT_MOTION_TIMEOUT 20
-#define SETTING_LIGHT_MOTION_MAX_LUX 4
+#define SETTING_LIGHT_MOTION_MAX_LUX 10.0f
 
 // Device custom settings
 HomieSetting<long> settingLightOnMotionTimeout("lightOnMotionTimeout",
@@ -186,14 +186,22 @@ bool buttonHandler(const ButtonEvent &event) {
 
 bool motionHandler(bool state) {
 
+    auto maxLux = settingLightOnMotionMaxLux.get();
+    auto lightTimeout = settingLightOnMotionTimeout.get();
+
     Homie.getLogger() << "Motion " << state
                       // typecasts overloading (see RetentionVar impl.)
-                      << " with " << (float) photoresistorNode << " lux"
+                      << " with " << (float) photoresistorNode << " lux (max " << maxLux << ')'
                       << endl;
 
     // Switch on light on motion and darkly
-    if (state && photoresistorNode.value() < 4) {
-        ledNode.setTimeoutWithInit(20);
+    if(state && photoresistorNode.value() < maxLux) {
+        ledNode.stopTimeout();
+        ledNode.setState(true);
+    } else if (!state) {
+        // Timeout start only on false because motion stay true if continuously moving ahead it
+        // ie. moving time > lightTimeout make light switch off
+        ledNode.setTimeout(lightTimeout);
     }
 
     return true;
