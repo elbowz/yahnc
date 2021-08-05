@@ -59,4 +59,9 @@ public:
                uint16_t debounceInterval = 10, uint8_t stateForPressed = LOW,
                uint8_t maxMultiPressCount = 3, uint16_t maxMultiPressInterval = 1000,
                const ButtonNode::OnButtonChangeFunc &onChangeFunc = [](const ButtonEvent &event) { return true; });
+
+    ButtonNode &setOnChangeFunc(const OnButtonChangeFunc &func) {
+        mOnChangeFunc = func;
+        return *this;
+    }
 };

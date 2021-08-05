@@ -59,8 +59,6 @@ HomieSetting<double> settingLightOnMotionMaxLux("lightOnMotionMaxLux",
 // Forward declaration
 void homieLoopHandler();
 
-bool buttonHandler(const ButtonEvent &event);
-
 bool buzzerHandler(const HomieRange &range, const String &property, const String &value);
 
 // Extend due the convert ADC analog read to Lux
@@ -99,7 +97,7 @@ SwitchNode ledNode("light", "Led light", PIN_LIGHT);
 BME280Node bme280Node("bme280", "BME280", BME280_I2C_ADDRESS);
 GL5528Node photoresistorNode("luminance", "Luminance", 1000, 0.80f);
 BinarySensorNode pirNode("motion", "Motion detector", PIN_PIR, INPUT, 5, HIGH);
-ButtonNode buttonNode("button", "Button", PIN_BUTTON, INPUT_PULLUP, 20, LOW, 3, 1000, buttonHandler);
+ButtonNode buttonNode("button", "Button", PIN_BUTTON, INPUT_PULLUP, 20, LOW, 3, 1000);
 // TODO create a PR for Homie prj and add a constructor overload:
 // HomieNode(const char* id, const char* name, const char* type, const HomieInternals::NodeInputHandler& nodeInputHandler = [](const HomieRange& range, const String& property, const String& value) { return false; });
 // note: buzzerNode is implemented using Homie "classic method" (ie. no class)
@@ -259,6 +257,9 @@ void setup() {
 
     photoresistorNode.setRunLoopDisconnected(true);
     photoresistorNode.setOnChangeFunc(photoresistorHandler);
+
+    buttonNode.setRunLoopDisconnected(true);
+    buttonNode.setOnChangeFunc(buttonHandler);
 
     // Buzzer MQTT topic/proprieties configuration
     buzzerNode.advertise("play").setDatatype("string").setFormat("json").settable();

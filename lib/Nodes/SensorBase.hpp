@@ -30,6 +30,7 @@ protected:
     /**
      * Called on measurement change
      * This function can be set or override through inheritance way.
+     * @param value new value
      * @return true to allow the sendMeasurement invocation
      */
     virtual bool onChange(T value);
@@ -57,7 +58,7 @@ public:
     /**
      * Called to send the measurement
      * This function can be set or override through inheritance way.
-     * @return read value
+     * @param value to send
      */
     virtual void sendMeasurement(T value) const;
 

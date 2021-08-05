@@ -24,10 +24,6 @@ void BinarySensorNode::loop() {
 
         if (onChange(state)) {
             sendMeasurement(state);
-
-            /*Homie.getLogger() << cIndent << BaseNode::getName()
-                              << F(" is ") << (state ? F("true") : F("false"))
-                              << endl;*/
         }
     }
 }

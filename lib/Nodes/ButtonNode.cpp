@@ -51,7 +51,7 @@ void ButtonNode::loop() {
         }
     } else if (mMultiPressStartTime && millis() - mMultiPressStartTime > mMaxMultiPressInterval) {
         // reached the allowed max interval
-        if (mPressCount > 1) {
+        if (mPressCount >= 1) {
             sendPressCount(true);
         }
 
@@ -65,7 +65,7 @@ void ButtonNode::sendPressCount(bool maxInterval) {
     mEvent.type = maxInterval ? ButtonEventType::MULTI_PRESS_INTERVAL : ButtonEventType::MULTI_PRESS_COUNT;
     mEvent.pressCount = mPressCount;
 
-    if (onChange(mEvent)) {
+    if (onChange(mEvent) && Homie.isConnected()) {
         setProperty("press-count").send(String(mEvent.pressCount));
     }
 
@@ -84,7 +84,7 @@ bool ButtonNode::onChange(bool state) {
 
     bool allowSend = onChange(mEvent);
 
-    if(!state && allowSend) {
+    if(Homie.isConnected() && !state && allowSend) {
         // on ButtonEventType::RELEASE publish "press-duration"
         setProperty("press-duration").send(String(mEvent.duration.previous));
         //Homie.getLogger() << BaseNode::getName() << "press-duration: " << mEvent.duration.previous << endl;
