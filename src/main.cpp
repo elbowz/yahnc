@@ -1,4 +1,5 @@
-// TemperatureHUmidityMotionBuzzerLight-Pressure
+// THUMBL-P: TemperatureHUmidityMotionBuzzerLight-Pressure
+
 #define AP_NAME "BDIot"
 #define FW_NAME "THUMBL-P"
 #define FW_VERSION "0.0.6b"

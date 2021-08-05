@@ -6,7 +6,14 @@
 #include <RetentionVar.hpp>
 
 
-//TODO: nullptr also for default value of onChangeFunc ?
+/**
+ * TODO:
+ * * nullptr also for default value of onLightChange ?
+ * * rename readMeasurement/sendMeasurement to read/send
+ * * move readMeasurement/sendMeasurement to public
+ * * remove SensorInterface and use a Template Specialization of RetentionVar for bool ?
+ * * add topic, dataType, format, unit (used for advertise and setProperty)...maybe extend PropertyInterface ?
+ */
 
 template<class T>
 class SensorInterface {

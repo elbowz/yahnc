@@ -4,6 +4,11 @@
 #include <BaseNode.hpp>
 #include <SensorBase.hpp>
 
+/**
+ * TODO:
+ * * rename to BinaryInNode
+ */
+
 using B2Button = Bounce2::Button;
 
 class BinarySensorNode : public BaseNode, public SensorInterface<bool>, public B2Button {

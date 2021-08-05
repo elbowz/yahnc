@@ -1,8 +1,12 @@
 #pragma once
 
-// TODO:
-// * convert to string with F() ?!
-// * see if $state topic is used (https://homieiot.github.io/specification/#device-lifecycle) otherwise try to change cStatusTopic
+/**
+ * TODO:
+ * * try to use PROGMEM ?!
+ */
+
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
 
 // Units
 #define cUnitDegrees "°C"

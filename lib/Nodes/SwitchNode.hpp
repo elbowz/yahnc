@@ -2,6 +2,17 @@
 
 #include <BaseNode.hpp>
 
+/**
+ * TODO:
+ * * pass node id to mSetHwStateFunc, mGetHwStateFunc ?
+ * * allow to retrieve state from external modification (light impulsive switch with rotary relè):
+ *      * state from another pin
+ *      * loop on getHwState
+ *      note: maybe a new class that inherit form SwitchNode and BinarySensorNode?
+ * * inherit from SensorInterface (getHwState => readMeasuremente, onChange, part of setState => sendMeasurement)
+ * * rename to BinaryOutNode
+ */
+
 class SwitchNode : public BaseNode {
 public:
     typedef std::function<bool()> GetStateFunc;

@@ -3,23 +3,14 @@
 #include <functional>
 #include <Arduino.h>
 
-/*
-// TODO
-// * add OnChange to RetentionVar class...and rename OnUpdate => updateCondition/Guard
-// * not declared inside RetentionVar to avoid use with template parameter (ie. RetentionVar<int>::ChangeValueReason::NO_CHANGE)
-// * not used the scoped "enum class" to allow implicit casting
-namespace ChangeValue {
-    enum reason : uint8_t {
-        NO_CHANGE = 0,
-        INIT,
-        GAP_TIME,
-        GAP_RATE,
-        GAP_ABS,
-        UPDATE_HANDLER,
-        FORCED
-    };
-}*/
+/**
+ * TODO:
+ * * rename OnUpdate => updateCondition/Guard
+ */
 
+// notes:
+// * not declared inside RetentionVar to avoid use with template parameter (ie. RetentionVar<int>::ChangeValueReason::NO_CHANGE)
+// * not used the scoped "enum class" to allow implicit casting (eg. namespace ChangeValue { enum reason : uint8_t {...) ?!
 enum class ChangeValueReason : uint8_t {
     NO_CHANGE = 0,
     INIT,

@@ -11,9 +11,9 @@ class PressureSensor;
 
 /**
  * TODO:
- * * Create a MultiSensorNode that aggregate SensorBase through a std::vector<SensorBase*> sensors.
- * * Add destructor (eg. delete pointers) or use std::unique_ptr<>/std::shared_ptr<Base>
- * * move all advertise in setup()?
+ * * create a MultiSensorNode that aggregate SensorBase through a std::vector<SensorBase*> sensors.
+ * * add destructor (eg. delete pointers) or use std::unique_ptr<>/std::shared_ptr<>
+ * * move all advertise in setup() ?
  */
 
 class BME280Node : public BaseNode {
