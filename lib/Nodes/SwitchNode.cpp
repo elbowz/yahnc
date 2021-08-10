@@ -8,13 +8,12 @@ SwitchNode::SwitchNode(const char *id, const char *name, int8_t pin, bool revers
                        const SetHwStateFunc &setHwStateFunc,
                        const SendStateFunc &sendStateFunc)
         : BaseNode(id, name, "switch"),
-          ActuatorBase<bool>(name, onSetFunc, getStateFunc, setHwStateFunc, sendStateFunc),
+          ActuatorBase<bool>(id, onSetFunc, getStateFunc, setHwStateFunc, sendStateFunc),
           mPin(pin) {
 
     //asprintf(&_caption, "• %s relay pin[%d]:", name, pin);
 
     mOnValue = reverseSignal ? LOW : HIGH;
-    mOffValue = !mOnValue;
 }
 
 void SwitchNode::setup() {
@@ -24,7 +23,7 @@ void SwitchNode::setup() {
 
     // note: inputHandler is set and handleInput return true
     // to still allow the external use of "SwitchNode::getProperty("on")->settable(lightOnHandler)" by user
-    advertise("on")
+    advertise(getId())
     .setDatatype("boolean")
     .settable([](const HomieRange &range, const String &value) { return true; });
 
@@ -46,7 +45,7 @@ void SwitchNode::onReadyToOperate() {
 
 bool SwitchNode::handleInput(const HomieRange &range, const String &property, const String &value) {
 
-    if (property == "on") {
+    if (property == getId()) {
 
         if (value != "true" && value != "false" && value != "toggle") return false;
 
@@ -86,7 +85,7 @@ void SwitchNode::setHwState(bool on) const {
     if (mSetHwStateFunc) {
         mSetHwStateFunc(on);
     } else if (mPin > cDisabledPin) {
-        digitalWrite(mPin, on ? mOnValue : mOffValue);
+        digitalWrite(mPin, on ? mOnValue : !mOnValue);
     } else {
         HomieInternals::Helpers::abort(F("✖ pin and setHwStateFunc() are both not set!"));
     }
@@ -95,7 +94,7 @@ void SwitchNode::setHwState(bool on) const {
 void SwitchNode::sendState(bool value) const {
 
     if (Homie.isConnected()) {
-        setProperty("on").send(value ? "true" : "false");
+        setProperty(getId()).send(value ? "true" : "false");
     }
 }
 

@@ -6,7 +6,7 @@ AdcNode::AdcNode(const char *id, const char *name,
                  uint32_t readInterval, float sendOnChangeAbs,
                  const SensorBase<float>::OnChangeFunc &onChangeFunc)
         : BaseNode(id, name, "photoresistorNode"),
-          SensorBase(name, readInterval, 0, sendOnChangeAbs, nullptr, nullptr, onChangeFunc) {
+          SensorBase(id, readInterval, 0, sendOnChangeAbs, nullptr, nullptr, onChangeFunc) {
 
     // ADC pin used to measure VCC (e.g. on battery)
     // true if previously called macro ADC_MODE(ADC_VCC)
@@ -15,7 +15,7 @@ AdcNode::AdcNode(const char *id, const char *name,
 
 void AdcNode::setup() {
 
-    advertise(cVoltageTopic)
+    advertise(getId())
     .setDatatype("float")
     .setFormat("0:1.00")
     .setUnit(cUnitVolt);
@@ -32,6 +32,6 @@ float AdcNode::readMeasurement() {
 void AdcNode::sendMeasurement(float value) const {
 
     if(Homie.isConnected()) {
-        setProperty(cVoltageTopic).send(String(value));
+        setProperty(getId()).send(String(value));
     }
 }

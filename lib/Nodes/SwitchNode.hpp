@@ -11,13 +11,13 @@
  *      * loop on getHwState
  *      note: maybe a new class that inherit form SwitchNode and BinarySensorNode?
  * * rename to BinaryOutNode
+ * * rename reverseSignal in stateForTrue/On ?
  */
 
 class SwitchNode : public BaseNode, public ActuatorBase<bool> {
 private:
     int8_t mPin;
     uint8_t mOnValue;
-    uint8_t mOffValue;
     Ticker mTicker;
 
 protected:

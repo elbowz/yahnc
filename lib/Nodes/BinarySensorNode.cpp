@@ -1,18 +1,18 @@
 #include "BinarySensorNode.hpp"
 
 BinarySensorNode::BinarySensorNode(const char *id, const char *name,
-                                   uint8_t pin, uint8_t pinMode, uint16_t debounceInterval, uint8_t stateForPressed,
+                                   uint8_t pin, uint8_t pinMode, uint16_t debounceInterval, uint8_t pinStateForTrue,
                                    const SensorInterface<bool>::OnChangeFunc &onChangeFunc)
         : BaseNode(id, name, "binary"),
-          SensorInterface<bool>(name, onChangeFunc),
+          SensorInterface<bool>(id, onChangeFunc),
           B2Button() {
 
     // init Bounce2
     B2Button::attach(pin, pinMode);
     B2Button::interval(debounceInterval);
-    B2Button::setPressedState(stateForPressed);
+    B2Button::setPressedState(pinStateForTrue);
 
-    advertise("state").setDatatype("boolean");
+    advertise(getId()).setDatatype("boolean");
 }
 
 void BinarySensorNode::loop() {
@@ -35,6 +35,6 @@ bool BinarySensorNode::readMeasurement() {
 void BinarySensorNode::sendMeasurement(bool state) const {
 
     if (Homie.isConnected()) {
-        setProperty("state").send(state ? F("true") : F("false"));
+        setProperty(getId()).send(state ? F("true") : F("false"));
     }
 }
