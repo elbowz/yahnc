@@ -12,15 +12,16 @@
  *      note: maybe a new class that inherit form SwitchNode and BinarySensorNode?
  * * rename to BinaryOutNode
  * * rename reverseSignal in stateForTrue/On ?
+ * * new feature: restore state after lost power: On, Off and Remember last mode (maybe inside ActuatorBase?)
+ *   (hint: EEPROM.read(); EEPROM.write(SHUTTERS_EEPROM_POSITION, state); EEPROM.commit();)
  */
 
-class SwitchNode : public BaseNode, public ActuatorBase<bool> {
-private:
+class SwitchNode : virtual public BaseNode, public ActuatorBase<bool> {
+protected:
     int8_t mPin;
     uint8_t mOnValue;
     Ticker mTicker;
 
-protected:
     bool handleInput(const HomieRange &range, const String &property, const String &value) override;
 
     void onReadyToOperate() override;
@@ -31,7 +32,7 @@ public:
     explicit SwitchNode(const char *id,
                         const char *name,
                         int8_t pin = cDisabledPin,
-                        bool reverseSignal = false,
+                        uint8_t pinValueForTrue = HIGH,
                         const OnSetFunc &onSetFunc = [](bool value) { return true; },
                         const GetStateFunc &getStateFunc = nullptr,
                         const SetHwStateFunc &setHwStateFunc = nullptr,
@@ -47,9 +48,9 @@ public:
     /**
      * Set pin/hw state.
      * Overriding if you need to change it or set by constructor/setHwStateFunc
-     * @param on switch state, not the pin value (ie. LOW/HIGH)
+     * @param value switch state, not the pin value (ie. LOW/HIGH)
      */
-    void setHwState(bool on) const override;
+    void setHwState(bool value) override;
 
     /**
      * Send/setProperty

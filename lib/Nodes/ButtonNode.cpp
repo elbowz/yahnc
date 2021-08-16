@@ -2,10 +2,11 @@
 
 ButtonNode::ButtonNode(const char *id, const char *name,
                        uint8_t pin, uint8_t pinMode,
-                       uint16_t debounceInterval, uint8_t stateForPressed,
+                       uint16_t debounceInterval, uint8_t pinValueForPressed,
                        uint8_t maxMultiPressCount, uint16_t maxMultiPressInterval,
                        const ButtonNode::OnButtonChangeFunc &onChangeFunc)
-        : BinarySensorNode(id, name, pin, pinMode, debounceInterval, stateForPressed),
+        : BaseNode(id, name, "button"),
+          BinarySensorNode(id, name, pin, pinMode, debounceInterval, pinValueForPressed),
           mMaxMultiPressCount(maxMultiPressCount),
           mMaxMultiPressInterval(maxMultiPressInterval),
           mOnChangeFunc(onChangeFunc) {
@@ -84,7 +85,7 @@ bool ButtonNode::onChange(bool state) {
 
     bool allowSend = onChange(mEvent);
 
-    if(Homie.isConnected() && !state && allowSend) {
+    if (Homie.isConnected() && !state && allowSend) {
         // on ButtonEventType::RELEASE publish "press-duration"
         setProperty("press-duration").send(String(mEvent.duration.previous));
         //Homie.getLogger() << BaseNode::getName() << "press-duration: " << mEvent.duration.previous << endl;

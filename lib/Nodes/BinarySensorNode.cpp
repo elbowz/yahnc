@@ -1,7 +1,7 @@
 #include "BinarySensorNode.hpp"
 
 BinarySensorNode::BinarySensorNode(const char *id, const char *name,
-                                   uint8_t pin, uint8_t pinMode, uint16_t debounceInterval, uint8_t pinStateForTrue,
+                                   uint8_t pin, uint8_t pinMode, uint16_t debounceInterval, uint8_t pinValueForTrue,
                                    const SensorInterface<bool>::OnChangeFunc &onChangeFunc)
         : BaseNode(id, name, "binary"),
           SensorInterface<bool>(id, onChangeFunc),
@@ -10,7 +10,7 @@ BinarySensorNode::BinarySensorNode(const char *id, const char *name,
     // init Bounce2
     B2Button::attach(pin, pinMode);
     B2Button::interval(debounceInterval);
-    B2Button::setPressedState(pinStateForTrue);
+    B2Button::setPressedState(pinValueForTrue);
 
     advertise(getId()).setDatatype("boolean");
 }

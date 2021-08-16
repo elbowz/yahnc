@@ -2,6 +2,11 @@
 
 #include <BinarySensorNode.hpp>
 
+/**
+ * TODO:
+ * * put enum and struct inside ?
+ */
+
 enum class ButtonEventType : uint8_t {
     PRESS = 1,
     RELEASE,
@@ -56,7 +61,7 @@ protected:
 public:
     ButtonNode(const char *id, const char *name,
                uint8_t pin, uint8_t pinMode = INPUT_PULLUP,
-               uint16_t debounceInterval = 10, uint8_t stateForPressed = LOW,
+               uint16_t debounceInterval = 10, uint8_t pinValueForPressed = LOW,
                uint8_t maxMultiPressCount = 3, uint16_t maxMultiPressInterval = 1000,
                const ButtonNode::OnButtonChangeFunc &onChangeFunc = [](const ButtonEvent &event) { return true; });
 

@@ -2,6 +2,12 @@
 
 extern int __get_adc_mode();
 
+/**
+ * TODO:
+ * * manage status topic: isnan(ESP.getVcc()) => setProperty(cStatusTopic).send("error")
+ *   note: check what happen when no wire is connected to ADC pin
+ */
+
 AdcNode::AdcNode(const char *id, const char *name,
                  uint32_t readInterval, float sendOnChangeAbs,
                  const SensorBase<float>::OnChangeFunc &onChangeFunc)

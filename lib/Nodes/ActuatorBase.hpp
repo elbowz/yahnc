@@ -60,7 +60,7 @@ public:
      * This function can be set or override through inheritance way.
      * @param value to set
      */
-    virtual void setHwState(T value) const;
+    virtual void setHwState(T value);
 
     /**
      * Called to send state
@@ -124,7 +124,7 @@ void ActuatorBase<T>::setState(T value) {
 }
 
 template<class T>
-void ActuatorBase<T>::setHwState(T value) const {
+void ActuatorBase<T>::setHwState(T value) {
     if (!mSetHwStateFunc) {
         HomieInternals::Helpers::abort(F("✖ SetHwStateFunc() is not set!"));
     }

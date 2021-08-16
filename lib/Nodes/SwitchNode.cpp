@@ -2,7 +2,7 @@
 
 #include "SwitchNode.hpp"
 
-SwitchNode::SwitchNode(const char *id, const char *name, int8_t pin, bool reverseSignal,
+SwitchNode::SwitchNode(const char *id, const char *name, int8_t pin, uint8_t pinValueForTrue,
                        const OnSetFunc &onSetFunc,
                        const GetStateFunc &getStateFunc,
                        const SetHwStateFunc &setHwStateFunc,
@@ -13,16 +13,12 @@ SwitchNode::SwitchNode(const char *id, const char *name, int8_t pin, bool revers
 
     //asprintf(&_caption, "• %s relay pin[%d]:", name, pin);
 
-    mOnValue = reverseSignal ? LOW : HIGH;
-}
+    mOnValue = pinValueForTrue;
 
-void SwitchNode::setup() {
-    if (mPin > cDisabledPin) {
-        pinMode(mPin, OUTPUT);
-    }
-
-    // note: inputHandler is set and handleInput return true
-    // to still allow the external use of "SwitchNode::getProperty("on")->settable(lightOnHandler)" by user
+    // note:
+    // * inputHandler is set and handleInput return true, to allow the use of
+    //   "SwitchNode::getProperty(topic)->settable(lightOnHandler)" by user
+    // * don't move in setup...avoid crash
     advertise(getId())
     .setDatatype("boolean")
     .settable([](const HomieRange &range, const String &value) { return true; });
@@ -36,9 +32,15 @@ void SwitchNode::setup() {
     .settable([](const HomieRange &range, const String &value) { return true; });
 }
 
+void SwitchNode::setup() {
+    if (mPin > cDisabledPin) {
+        pinMode(mPin, OUTPUT);
+    }
+}
+
 void SwitchNode::onReadyToOperate() {
 
-    // TODO: retrieve value from mqtt or set the start default value
+    // TODO: retrieve value from mqtt/EEPROM or set the start default value
     setState(false);
     setTimeout(0);
 };
@@ -49,8 +51,8 @@ bool SwitchNode::handleInput(const HomieRange &range, const String &property, co
 
         if (value != "true" && value != "false" && value != "toggle") return false;
 
-        bool newStatus = (value == "toggle" ? !getState() : value == "true");
-        setState(newStatus);
+        bool newState = (value == "toggle" ? !getState() : value == "true");
+        setState(newState);
 
         return false;
 
@@ -80,12 +82,12 @@ bool SwitchNode::getState() {
     return false;
 }
 
-void SwitchNode::setHwState(bool on) const {
+void SwitchNode::setHwState(bool value) {
 
     if (mSetHwStateFunc) {
-        mSetHwStateFunc(on);
+        mSetHwStateFunc(value);
     } else if (mPin > cDisabledPin) {
-        digitalWrite(mPin, on ? mOnValue : !mOnValue);
+        digitalWrite(mPin, value ? mOnValue : !mOnValue);
     } else {
         HomieInternals::Helpers::abort(F("✖ pin and setHwStateFunc() are both not set!"));
     }
