@@ -17,26 +17,27 @@
 
 /**
  * TODO:
- *
+ * * create a PR for Homie prj and add a constructor overload to follow doc and simplify buzzerNode instance:
+ *   HomieNode(const char* id, const char* name, const char* type, const HomieInternals::NodeInputHandler& nodeInputHandler = [](const HomieRange& range, const String& property, const String& value) { return false; });
  */
 
 #ifndef SERIAL_SPEED
 #define SERIAL_SPEED 115200
 #endif
 
-// TODO: create a PR for Homie prj and add to Statistics:
-//  https://github.com/homieiot/homie-esp8266/blob/9cd83972f27b394eab8a5e3e2baef20eea1b5408/src/Homie/Boot/BootNormal.cpp#L175
-#ifdef DEBUG
-HomieInternals::Timer statsTimer;
-#endif
 
 // For read ESP8266 VCC voltage
 //ADC_MODE(ADC_VCC);
+#define PIN_LED 2
+#define PIN_BME280_SDA 4
+#define PIN_BME280_SCL 5
 #define PIN_PIR 12
 #define PIN_BUZZER 13
 #define PIN_BUTTON 14
 #define PIN_LIGHT 15
 #define BME280_I2C_ADDRESS 0x76
+#define SETTING_LIGHT_MOTION_TIMEOUT 20
+#define SETTING_LIGHT_MOTION_MAX_LUX 10.0f
 
 // Melodies preset
 std::map<const String, const char *> rtttlMelodies = {
@@ -46,9 +47,6 @@ std::map<const String, const char *> rtttlMelodies = {
         {"scale-up",  ":d=32,o=5,b=100:c,c#,d#,e,f#,g#,a#,b"},
         {"tetris",    ":d=4,o=5,b=160:e6,8b,8c6,8d6,16e6,16d6,8c6,8b,a,8a,8c6,e6,8d6,8c6,b,8b,8c6,d6,e6,c6,a,2a,8p,d6,8f6,a6,8g6,8f6,e6,8e6,8c6,e6,8d6,8c6,b,8b,8c6,d6,e6,c6,a,a"}
 };
-
-#define SETTING_LIGHT_MOTION_TIMEOUT 20
-#define SETTING_LIGHT_MOTION_MAX_LUX 10.0f
 
 // Device custom settings
 HomieSetting<long> settingLightOnMotionTimeout("lightOnMotionTimeout",
@@ -60,6 +58,7 @@ HomieSetting<double> settingLightOnMotionMaxLux("lightOnMotionMaxLux",
 void homieLoopHandler();
 
 bool buzzerHandler(const HomieRange &range, const String &property, const String &value);
+
 
 // Extend due the convert ADC analog read to Lux
 class GL5528Node : public AdcNode {
@@ -98,9 +97,7 @@ BME280Node bme280Node("bme280", "BME280", BME280_I2C_ADDRESS);
 GL5528Node photoresistorNode("luminance", "Luminance", 1000, 0.80f);
 BinarySensorNode pirNode("motion", "Motion detector", PIN_PIR, INPUT, 5, HIGH);
 ButtonNode buttonNode("button", "Button", PIN_BUTTON, INPUT_PULLUP, 20, LOW, 3, 1000);
-// TODO create a PR for Homie prj and add a constructor overload:
-// HomieNode(const char* id, const char* name, const char* type, const HomieInternals::NodeInputHandler& nodeInputHandler = [](const HomieRange& range, const String& property, const String& value) { return false; });
-// note: buzzerNode is implemented using Homie "classic method" (ie. no class)
+// note: buzzerNode is implemented using Homie "classic method" (ie no custom node class)
 HomieNode buzzerNode("buzzer", "Rtttl buzzer", "Sound", false, 0, 0, buzzerHandler);
 
 
@@ -110,15 +107,41 @@ HomieNode buzzerNode("buzzer", "Rtttl buzzer", "Sound", false, 0, 0, buzzerHandl
 void onHomieEvent(const HomieEvent &event) {
     switch (event.type) {
         case HomieEventType::MQTT_READY:
+
             rtttl::begin(PIN_BUZZER, rtttlMelodies.find("scale-up")->second);
             break;
+
+        #ifdef DEBUG
+        case HomieEventType::SENDING_STATISTICS: {
+
+            // TODO: create a PR for Homie prj and add to Statistics:
+            //  https://github.com/homieiot/homie-esp8266/blob/9cd83972f27b394eab8a5e3e2baef20eea1b5408/src/Homie/Boot/BootNormal.cpp#L175
+            size_t baseTopicLength = strlen(Homie.getConfiguration().mqtt.baseTopic) + strlen(Homie.getConfiguration().deviceId);
+            size_t longestSubtopicLength = 31 + 1;
+
+            std::unique_ptr<char[]> freeHeapTopic = std::unique_ptr<char[]>(new char[baseTopicLength + longestSubtopicLength]);
+            strcpy(freeHeapTopic.get(), Homie.getConfiguration().mqtt.baseTopic);
+            strcat(freeHeapTopic.get(), Homie.getConfiguration().deviceId);
+            strcat_P(freeHeapTopic.get(), PSTR("/$stats/free-heap"));
+
+            char freeHeapStr[20];
+            uint32_t freeHeap = ESP.getFreeHeap();
+            utoa(freeHeap, freeHeapStr, 10);
+
+            Homie.getLogger() << F("  • FreeHeap: ") << freeHeapStr << F("b") << endl;
+            Homie.getMqttClient().publish(freeHeapTopic.get(), 1, true, freeHeapStr);
+
+            break;
+        }
+        #endif
+
         default:
             break;
     }
 }
 
 bool broadcastHandler(const String &topic, const String &value) {
-    Serial << "Received broadcast " << topic << ": " << value << endl;
+    Homie.getLogger() << "Received broadcast " << topic << ": " << value << endl;
     return true;
 }
 
@@ -139,7 +162,8 @@ bool buzzerHandler(const HomieRange &range, const String &property, const String
 
             rtttl::begin(PIN_BUZZER, melody->second);
         } else {
-            // Custom melody json
+            // Json payload
+            // allow custom melody (rtttl format), loopCount and loopGap
             StaticJsonDocument<256> doc;
 
             deserializeJson(doc, value);
@@ -151,7 +175,7 @@ bool buzzerHandler(const HomieRange &range, const String &property, const String
             if (json.containsKey(F("preset"))) {
 
                 auto melodyIterator = rtttlMelodies.find(json[F("preset")]);
-                if (melodyIterator == rtttlMelodies.end()) return true;
+                if (melodyIterator == rtttlMelodies.end()) { return true; }
 
                 rtttl = melodyIterator->second;
 
@@ -242,8 +266,8 @@ void setup() {
     Serial.begin(SERIAL_SPEED);
 
     // Initializes I2C for BME280Node sensor
-    // use default value. Uncomment and change on need
-    //Wire.begin(4, 5);
+    // use default value. Uncomment and change as need
+    //Wire.begin(PIN_BME280_SDA, PIN_BME280_SCL);
     pinMode(PIN_BUZZER, OUTPUT);
 
     // HOMIE SETUP
@@ -267,7 +291,7 @@ void setup() {
     //  * connecting to MQTT (faster blink)
     //  * connected (stay off)
     //Homie.disableLedFeedback();
-    //Homie.setLedPin(16, HIGH);
+    //Homie.setLedPin(PIN_LED, HIGH);
 
     //Homie.disableLogging();
     // pressing for 5 seconds the FLASH (GPIO0) button (default behaviour)
@@ -280,7 +304,7 @@ void setup() {
     Homie.setGlobalInputHandler(globalInputHandler);
 
     // NODES SETUP
-    //ledNode.setOnChangeFunc(onLightChange);
+    //ledNode.setOnSetFunc(onLightChange);
     //ledNode.getProperty("on")->settable(lightOnHandler);
 
     // call pirNode.loop() even when not connected (but still in normal mode)
@@ -299,10 +323,6 @@ void setup() {
     buzzerNode.advertise("stop").setDatatype("boolean").settable();
     buzzerNode.advertise("is-playing").setDatatype("boolean");
 
-#ifdef DEBUG
-    statsTimer.setInterval(5000);
-#endif
-
     Homie.setup();
 }
 
@@ -313,19 +333,9 @@ void loop() {
         if (rtttl::isPlaying()) rtttl::play();
     }
 
-#ifdef DEBUG
-    // Check Free Heap memory space
-    if(statsTimer.check()) {
-        Homie.getLogger() << F("getFreeHeap(): ") << ESP.getFreeHeap() << endl;
-        statsTimer.tick();
-    }
-#endif
-
     // Uncomment for ssl
     // https://github.com/homieiot/homie-esp8266/issues/640
-    //delay(100);
-    // or
-    //yield();
+    // try delay(100); or yield();
 }
 
 // Homie loop func continuously called in Normal mode and connected
