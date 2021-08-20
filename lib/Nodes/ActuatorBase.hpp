@@ -114,7 +114,8 @@ T ActuatorBase<T>::getState() {
 template<class T>
 void ActuatorBase<T>::setState(T value) {
 
-    if (onSet(value)) {
+    if (getState() != value && onSet(value)) {
+
         setHwState(value);
 
         if (Homie.isConnected()) {
