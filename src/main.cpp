@@ -81,29 +81,29 @@ void onHomieEvent(const HomieEvent &event) {
             rtttl::begin(PIN_BUZZER, rtttlMelodies.find("scale-up")->second);
             break;
 
-        #ifdef DEBUG
-        case HomieEventType::SENDING_STATISTICS: {
+#ifdef DEBUG
+            case HomieEventType::SENDING_STATISTICS: {
 
-            // TODO: create a PR for Homie prj and add to Statistics:
-            //  https://github.com/homieiot/homie-esp8266/blob/9cd83972f27b394eab8a5e3e2baef20eea1b5408/src/Homie/Boot/BootNormal.cpp#L175
-            size_t baseTopicLength = strlen(Homie.getConfiguration().mqtt.baseTopic) + strlen(Homie.getConfiguration().deviceId);
-            size_t longestSubtopicLength = 31 + 1;
+                // TODO: create a PR for Homie prj and add to Statistics:
+                //  https://github.com/homieiot/homie-esp8266/blob/9cd83972f27b394eab8a5e3e2baef20eea1b5408/src/Homie/Boot/BootNormal.cpp#L175
+                size_t baseTopicLength = strlen(Homie.getConfiguration().mqtt.baseTopic) + strlen(Homie.getConfiguration().deviceId);
+                size_t longestSubtopicLength = 31 + 1;
 
-            std::unique_ptr<char[]> freeHeapTopic = std::unique_ptr<char[]>(new char[baseTopicLength + longestSubtopicLength]);
-            strcpy(freeHeapTopic.get(), Homie.getConfiguration().mqtt.baseTopic);
-            strcat(freeHeapTopic.get(), Homie.getConfiguration().deviceId);
-            strcat_P(freeHeapTopic.get(), PSTR("/$stats/free-heap"));
+                std::unique_ptr<char[]> freeHeapTopic = std::unique_ptr<char[]>(new char[baseTopicLength + longestSubtopicLength]);
+                strcpy(freeHeapTopic.get(), Homie.getConfiguration().mqtt.baseTopic);
+                strcat(freeHeapTopic.get(), Homie.getConfiguration().deviceId);
+                strcat_P(freeHeapTopic.get(), PSTR("/$stats/free-heap"));
 
-            char freeHeapStr[20];
-            uint32_t freeHeap = ESP.getFreeHeap();
-            utoa(freeHeap, freeHeapStr, 10);
+                char freeHeapStr[20];
+                uint32_t freeHeap = ESP.getFreeHeap();
+                utoa(freeHeap, freeHeapStr, 10);
 
-            Homie.getLogger() << F("  • FreeHeap: ") << freeHeapStr << F("b") << endl;
-            Homie.getMqttClient().publish(freeHeapTopic.get(), 1, true, freeHeapStr);
+                Homie.getLogger() << F("  • FreeHeap: ") << freeHeapStr << F("b") << endl;
+                Homie.getMqttClient().publish(freeHeapTopic.get(), 1, true, freeHeapStr);
 
-            break;
-        }
-        #endif
+                break;
+            }
+#endif
 
         default:
             break;
@@ -214,13 +214,16 @@ bool motionHandler(bool state) {
                       << endl;
 
     // Switch on light on motion and darkly
-    if (state && photoresistorNode.value() < maxLux) {
-        ledNode.stopTimeout();
-        ledNode.setState(true);
-    } else if (!state) {
-        // Timeout start only on false because motion stay true if continuously moving ahead it
-        // ie. moving time > lightTimeout make light switch off
-        ledNode.setTimeout(lightTimeout);
+    if (photoresistorNode.value() < maxLux) {
+
+        if (state) {
+            ledNode.stopTimeout();
+            ledNode.setState(true);
+        } else {
+            // Timeout start only on false because motion stay true if continuously moving ahead it
+            // ie. moving time > lightTimeout make light switch off
+            ledNode.setTimeout(lightTimeout);
+        }
     }
 
     return true;

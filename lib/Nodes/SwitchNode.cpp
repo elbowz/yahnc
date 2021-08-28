@@ -20,16 +20,16 @@ SwitchNode::SwitchNode(const char *id, const char *name, int8_t pin, uint8_t pin
     //   "SwitchNode::getProperty(topic)->settable(lightOnHandler)" by user
     // * don't move in setup...avoid crash
     advertise(getId())
-    .setDatatype("boolean")
-    .settable([](const HomieRange &range, const String &value) { return true; });
+            .setDatatype("boolean")
+            .settable([](const HomieRange &range, const String &value) { return true; });
 
     char *format;
     asprintf(&format, F("0:%lld"), ULONG_MAX);
 
     advertise("timeout")
-    .setDatatype("integer")
-    .setFormat(format)
-    .settable([](const HomieRange &range, const String &value) { return true; });
+            .setDatatype("integer")
+            .setFormat(format)
+            .settable([](const HomieRange &range, const String &value) { return true; });
 }
 
 void SwitchNode::setup() {
@@ -118,7 +118,7 @@ void SwitchNode::setTimeout(uint32_t seconds, bool endState) {
     if (seconds > 0) {
         mTicker.once_scheduled(1, std::bind(&SwitchNode::setTimeout, this, seconds - 1, endState));
     } else {
-        if (getState() != endState) setState(endState);
+        setState(endState);
     }
 }
 

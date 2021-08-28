@@ -19,6 +19,7 @@ ButtonNode::ButtonNode(const char *id, const char *name,
 }
 
 void ButtonNode::loop() {
+    // manage Bounce2::Button
     BinarySensorNode::loop();
 
     /* Button hold */
