@@ -19,7 +19,7 @@ SwitchNode::SwitchNode(const char *id, const char *name, int8_t pin, uint8_t pin
     // * inputHandler is set and handleInput return true, to allow the use of
     //   "SwitchNode::getProperty(topic)->settable(lightOnHandler)" by user
     // * don't move in setup...avoid crash
-    advertise(getId())
+    advertise(ActuatorBase::getName())
             .setDatatype("boolean")
             .settable([](const HomieRange &range, const String &value) { return true; });
 
@@ -47,7 +47,7 @@ void SwitchNode::onReadyToOperate() {
 
 bool SwitchNode::handleInput(const HomieRange &range, const String &property, const String &value) {
 
-    if (property == getId()) {
+    if (property == ActuatorBase::getName()) {
 
         if (value != "true" && value != "false" && value != "toggle") return false;
 
@@ -96,7 +96,7 @@ void SwitchNode::setHwState(bool value) {
 void SwitchNode::sendState(bool value) const {
 
     if (Homie.isConnected()) {
-        setProperty(getId()).send(value ? "true" : "false");
+        setProperty(ActuatorBase::getName()).send(value ? "true" : "false");
     }
 }
 

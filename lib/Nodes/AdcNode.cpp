@@ -25,7 +25,7 @@ AdcNode::AdcNode(const char *id,
 
 void AdcNode::setup() {
 
-    advertise(getId())
+    advertise(SensorBase::getName())
             .setDatatype("float")
             .setFormat("0:1.00")
             .setUnit(cUnitVolt);
@@ -51,6 +51,6 @@ void AdcNode::sendMeasurement(float value) const {
     }
 
     if (Homie.isConnected()) {
-        setProperty(getId()).send(String(value));
+        setProperty(SensorBase::getName()).send(String(value));
     }
 }

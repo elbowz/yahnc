@@ -12,7 +12,7 @@ BinarySensorNode::BinarySensorNode(const char *id, const char *name,
     B2Button::interval(debounceInterval);
     B2Button::setPressedState(pinValueForTrue);
 
-    advertise(getId()).setDatatype("boolean");
+    advertise(SensorInterface::getName()).setDatatype("boolean");
 }
 
 void BinarySensorNode::loop() {
@@ -35,6 +35,6 @@ bool BinarySensorNode::readMeasurement() {
 void BinarySensorNode::sendMeasurement(bool state) const {
 
     if (Homie.isConnected()) {
-        setProperty(getId()).send(state ? F("true") : F("false"));
+        setProperty(SensorInterface::getName()).send(state ? F("true") : F("false"));
     }
 }
