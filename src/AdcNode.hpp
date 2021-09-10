@@ -1,7 +1,7 @@
 #pragma once
 
-#include <BaseNode.hpp>
-#include <SensorBase.hpp>
+#include "BaseNode.hpp"
+#include "SensorBase.hpp"
 
 class AdcNode : public BaseNode, public SensorBase<float> {
 

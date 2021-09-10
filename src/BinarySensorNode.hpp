@@ -1,8 +1,8 @@
 #pragma once
 
 #include <Bounce2.h>
-#include <BaseNode.hpp>
-#include <SensorBase.hpp>
+#include "BaseNode.hpp"
+#include "SensorBase.hpp"
 
 /**
  * TODO:

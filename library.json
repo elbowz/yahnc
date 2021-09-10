@@ -1,0 +1,36 @@
+{
+  "name": "YAHNC",
+  "version": "0.0.1b",
+  "keywords": "iot, home, Arduino, esp8266, homie, sensor, actuator, switch",
+  "description": "Yet Another Homie Node Collection for the ESP8266. These libs can be used as development base (ie utilities/framework) on which build new sensors and/or actuator",
+  "homepage": "https://github.com/elbowz/yahnc",
+  "license": "MIT",
+  "authors": {
+    "name": "Emanuele Palombo",
+    "url": "https://github.com/elbowz",
+    "maintainer": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/elbowz/yahnc.git",
+    "branch": "master"
+  },
+  "frameworks": "arduino",
+  "platforms": [
+    "espressif8266"
+  ],
+  "dependencies": [
+    {
+      "name": "Homie",
+      "version": "https://github.com/homieiot/homie-esp8266.git#develop"
+    },
+    {
+      "name": "Adafruit BME280 Library",
+      "version": "^2.2.0"
+    },
+    {
+      "name": "BME280",
+      "version": "^3.0.0"
+    }
+  ]
+}

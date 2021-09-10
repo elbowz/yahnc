@@ -1,6 +1,6 @@
 #pragma once
 
-#include <BinarySensorNode.hpp>
+#include "BinarySensorNode.hpp"
 
 /**
  * TODO:

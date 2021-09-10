@@ -3,7 +3,7 @@
 #include <functional>
 #include <Homie.hpp>
 
-#include <RetentionVar.hpp>
+#include "RetentionVar/RetentionVar.hpp"
 
 
 /**
